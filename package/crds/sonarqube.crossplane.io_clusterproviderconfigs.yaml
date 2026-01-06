@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: clusterproviderconfigs.template.crossplane.io
+  name: clusterproviderconfigs.sonarqube.crossplane.io
 spec:
-  group: template.crossplane.io
+  group: sonarqube.crossplane.io
   names:
     categories:
     - crossplane
     - provider
-    - template
+    - sonarqube
     kind: ClusterProviderConfig
     listKind: ClusterProviderConfigList
     plural: clusterproviderconfigs
@@ -29,7 +29,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: A ClusterProviderConfig configures a Template provider.
+        description: A ClusterProviderConfig configures a SonarQube provider.
         properties:
           apiVersion:
             description: |-
@@ -50,6 +50,9 @@ spec:
             type: object
           spec:
             properties:
+              baseURL:
+                description: BaseURL of the SonarQube instance.
+                type: string
               credentials:
                 description: Credentials required to authenticate to this provider.
                 properties:
@@ -106,7 +109,12 @@ spec:
                 required:
                 - source
                 type: object
+              insecureSkipVerify:
+                description: InsecureSkipVerify indicates whether to skip TLS certificate
+                  verification.
+                type: boolean
             required:
+            - baseURL
             - credentials
             type: object
           status:

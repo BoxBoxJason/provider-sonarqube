@@ -21,7 +21,15 @@ type ProviderCredentials struct {
 }
 
 type ProviderConfigSpec struct {
+	// BaseURL of the SonarQube instance.
+	// +kubebuilder:validation:Required
+	BaseURL string `json:"baseURL"`
+
+	// InsecureSkipVerify indicates whether to skip TLS certificate verification.
+	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
+
 	// Credentials required to authenticate to this provider.
+	// +kubebuilder:validation:Required
 	Credentials ProviderCredentials `json:"credentials"`
 }
 
@@ -31,7 +39,7 @@ type ProviderConfigSpec struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:printcolumn:name="SECRET-NAME",type="string",JSONPath=".spec.credentials.secretRef.name",priority=1
-// +kubebuilder:resource:scope=Namespaced,categories={crossplane,provider,template}
+// +kubebuilder:resource:scope=Namespaced,categories={crossplane,provider,sonarqube}
 // A ProviderConfig configures a Helm 'provider', i.e. a connection to a particular
 type ProviderConfig struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -57,7 +65,7 @@ type ProviderConfigList struct {
 // +kubebuilder:printcolumn:name="CONFIG-NAME",type="string",JSONPath=".providerConfigRef.name"
 // +kubebuilder:printcolumn:name="RESOURCE-KIND",type="string",JSONPath=".resourceRef.kind"
 // +kubebuilder:printcolumn:name="RESOURCE-NAME",type="string",JSONPath=".resourceRef.name"
-// +kubebuilder:resource:scope=Namespaced,categories={crossplane,provider,template}
+// +kubebuilder:resource:scope=Namespaced,categories={crossplane,provider,sonarqube}
 // A ProviderConfigUsage indicates that a resource is using a ProviderConfig.
 type ProviderConfigUsage struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -80,8 +88,8 @@ type ProviderConfigUsageList struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:printcolumn:name="SECRET-NAME",type="string",JSONPath=".spec.credentials.secretRef.name",priority=1
-// +kubebuilder:resource:scope=Cluster,categories={crossplane,provider,template}
-// A ClusterProviderConfig configures a Template provider.
+// +kubebuilder:resource:scope=Cluster,categories={crossplane,provider,sonarqube}
+// A ClusterProviderConfig configures a SonarQube provider.
 type ClusterProviderConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -106,7 +114,7 @@ type ClusterProviderConfigList struct {
 // +kubebuilder:printcolumn:name="CONFIG-NAME",type="string",JSONPath=".providerConfigRef.name"
 // +kubebuilder:printcolumn:name="RESOURCE-KIND",type="string",JSONPath=".resourceRef.kind"
 // +kubebuilder:printcolumn:name="RESOURCE-NAME",type="string",JSONPath=".resourceRef.name"
-// +kubebuilder:resource:scope=Cluster,categories={crossplane,provider,template}
+// +kubebuilder:resource:scope=Cluster,categories={crossplane,provider,sonarqube}
 // A ClusterProviderConfigUsage indicates that a resource is using a ClusterProviderConfig.
 type ClusterProviderConfigUsage struct {
 	metav1.TypeMeta   `json:",inline"`
