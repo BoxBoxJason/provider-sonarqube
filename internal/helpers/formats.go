@@ -1,0 +1,44 @@
+package helpers
+
+import "github.com/google/go-cmp/cmp"
+
+// IsComparablePtrEqualComparable compares a pointer to a comparable type with a comparable type.
+// If the pointer is nil, it returns true.
+// Otherwise, it dereferences the pointer and compares the value with the provided comparable type.
+func IsComparablePtrEqualComparable[T comparable](ptr *T, val T) bool {
+	// if ptr is nil, consider it equal (no difference between nil and any value)
+	if ptr == nil {
+		return true
+	}
+	// use cmp library to compare dereferenced ptr with val
+	return cmp.Equal(*ptr, val)
+}
+
+// IsComparablePtrEqualComparablePtr compares two pointers to comparable types.
+// If both pointers are nil, it returns true.
+// If one pointer is nil and the other is not, it returns false.
+// Otherwise, it dereferences both pointers and compares their values.
+func IsComparablePtrEqualComparablePtr[T comparable](ptr1 *T, ptr2 *T) bool {
+	// if both pointers are nil, consider them equal
+	if ptr1 == nil && ptr2 == nil {
+		return true
+	}
+	// if one pointer is nil and the other is not, consider them not equal
+	if ptr1 == nil || ptr2 == nil {
+		return false
+	}
+	// use cmp library to compare dereferenced ptr1 with dereferenced ptr2
+	return cmp.Equal(*ptr1, *ptr2)
+}
+
+// AssignIfNil assigns the value to the pointer if the pointer is nil.
+func AssignIfNil[T any](ptr **T, val T) {
+	// return early if ptr is nil to avoid dereferencing a nil pointer
+	if ptr == nil {
+		return
+	}
+	// assign val to ptr if ptr is nil
+	if *ptr == nil {
+		*ptr = &val
+	}
+}
