@@ -39,6 +39,9 @@ type QualityGateParameters struct {
 	// WARNING: It is currently not possible to unset the default Quality Gate in SonarQube once it is set. The only way to change the default Quality Gate is to set another Quality Gate as default.
 	// +kubebuilder:validation:Optional
 	Default *bool `json:"default,omitempty"`
+	// Conditions is the list of conditions associated with the Quality Gate.
+	// +kubebuilder:validation:Optional
+	Conditions []QualityGateConditionParameters `json:"conditions,omitempty"`
 }
 
 // QualityGateObservation are the observable fields of a QualityGate.
@@ -91,6 +94,47 @@ type QualityGatesActions struct {
 	Rename bool `json:"rename"`
 	// SetAsDefault defines whether the Quality Gate can be set as the default one.
 	SetAsDefault bool `json:"setAsDefault"`
+}
+
+// QualityGateConditionParameters are the configurable fields of a QualityGateCondition.
+type QualityGateConditionParameters struct {
+	// Id is the Condition ID
+	// It will be populated by the controller upon creation / update
+	// WARNING: Updating it manually will cause unexpected behaviors.
+	// +kubebuilder:validation:Optional
+	Id *string `json:"id,omitempty"`
+
+	// Error is the Condition error threshold
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:MinLength=1
+	Error string `json:"error,omitempty"`
+
+	// Metric is the Condition metric that the condition applies to.
+	// Only accepts metrics of the following types: INT, MILLISEC, RATING, WORK_DUR, FLOAT, PERCENT, LEVEL.
+	// The following metrics are forbidden: alert_status, security_hotspots, new_security_hotspots.
+	// +kubebuilder:validation:Pattern="^[a-zA-Z0-9_]+$"
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Metric string `json:"metric,omitempty"`
+
+	// Op is the Condition operator.
+	// Only LT (is lower than) and GT (is greater than) are supported.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=LT;GT
+	Op *string `json:"op,omitempty"`
+}
+
+// QualityGateConditionObservation are the observable fields of a QualityGateCondition.
+type QualityGateConditionObservation struct {
+	// Error is the Condition error threshold
+	Error string `json:"error,omitempty"`
+	// ID is the Condition ID
+	ID string `json:"id,omitempty"`
+	// Metric is the Condition metric that the condition applies to.
+	Metric string `json:"metric,omitempty"`
+	// Op is the Condition operator.
+	Op string `json:"op,omitempty"`
 }
 
 // +kubebuilder:object:root=true

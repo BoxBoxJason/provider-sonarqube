@@ -60,6 +60,45 @@ spec:
                 description: ForProvider represents the desired state of the Quality
                   Gate.
                 properties:
+                  conditions:
+                    description: Conditions is the list of conditions associated with
+                      the Quality Gate.
+                    items:
+                      description: QualityGateConditionParameters are the configurable
+                        fields of a QualityGateCondition.
+                      properties:
+                        error:
+                          description: Error is the Condition error threshold
+                          maxLength: 64
+                          minLength: 1
+                          type: string
+                        id:
+                          description: |-
+                            Id is the Condition ID
+                            It will be populated by the controller upon creation / update
+                            WARNING: Updating it manually will cause unexpected behaviors.
+                          type: string
+                        metric:
+                          description: |-
+                            Metric is the Condition metric that the condition applies to.
+                            Only accepts metrics of the following types: INT, MILLISEC, RATING, WORK_DUR, FLOAT, PERCENT, LEVEL.
+                            The following metrics are forbidden: alert_status, security_hotspots, new_security_hotspots.
+                          minLength: 1
+                          pattern: ^[a-zA-Z0-9_]+$
+                          type: string
+                        op:
+                          description: |-
+                            Op is the Condition operator.
+                            Only LT (is lower than) and GT (is greater than) are supported.
+                          enum:
+                          - LT
+                          - GT
+                          type: string
+                      required:
+                      - error
+                      - metric
+                      type: object
+                    type: array
                   default:
                     description: |-
                       Default indicates whether this Quality Gate is the default one.

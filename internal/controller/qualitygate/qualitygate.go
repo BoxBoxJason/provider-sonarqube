@@ -25,6 +25,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/feature"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/meta"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/pkg/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -183,14 +184,126 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	cr.Status.SetConditions(xpv1.Available())
 
 	current := cr.Spec.ForProvider.DeepCopy()
-	// Late initialize the spec with observed state
+	// Late initialize the spec with observed state (includes conditions)
 	instance.LateInitializeQualityGate(&cr.Spec.ForProvider, &cr.Status.AtProvider)
 
+	// Generate associations between QualityGateConditions spec and observation
+	associations := instance.GenerateQualityGateConditionsAssociation(cr.Spec.ForProvider.Conditions, cr.Status.AtProvider.Conditions)
+
+	// Check if conditions were late-initialized
+	conditionsLateInitialized := instance.WereQualityGateConditionsLateInitialized(current.Conditions, cr.Spec.ForProvider.Conditions)
+
 	return managed.ExternalObservation{
-		ResourceExists:          true,
-		ResourceUpToDate:        instance.IsQualityGateUpToDate(&cr.Spec.ForProvider, &cr.Status.AtProvider),
-		ResourceLateInitialized: !cmp.Equal(current, &cr.Spec.ForProvider),
+		ResourceExists:   true,
+		ResourceUpToDate: instance.IsQualityGateUpToDate(&cr.Spec.ForProvider, &cr.Status.AtProvider, associations),
+		// Check both regular fields and conditions for late-initialization
+		ResourceLateInitialized: !cmp.Equal(
+			current,
+			&cr.Spec.ForProvider,
+			cmpopts.IgnoreFields(v1alpha1.QualityGateParameters{}, "Conditions"),
+		) || conditionsLateInitialized,
 	}, nil
+}
+
+// syncQualityGateConditions synchronizes the Quality Gate Conditions in SonarQube
+// It deletes unwanted conditions, creates missing conditions, and updates out-of-date conditions
+func (c *external) syncQualityGateConditions(qualityGate *v1alpha1.QualityGate, qualityGateConditionAssociations map[string]instance.QualityGateConditionAssociation) error {
+	if len(qualityGateConditionAssociations) == 0 {
+		return nil
+	}
+
+	externalName := meta.GetExternalName(qualityGate)
+	if externalName == "" {
+		return fmt.Errorf("external name is not set for Quality Gate %s", qualityGate.Name)
+	}
+
+	if err := c.deleteUnwantedQualityGateConditions(qualityGateConditionAssociations); err != nil {
+		return err
+	}
+
+	if err := c.createMissingQualityGateConditions(externalName, qualityGateConditionAssociations); err != nil {
+		return err
+	}
+
+	if err := c.updateOutdatedQualityGateConditions(qualityGateConditionAssociations); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// deleteUnwantedQualityGateConditions deletes Quality Gate Conditions that are no longer needed
+func (c *external) deleteUnwantedQualityGateConditions(qualityGateConditionAssociations map[string]instance.QualityGateConditionAssociation) error {
+	missingQualityGateConditions := instance.FindMissingQualityGateConditions(qualityGateConditionAssociations)
+	for _, conditionObservation := range missingQualityGateConditions {
+		if conditionObservation == nil {
+			continue
+		}
+		deleteResponse, err := c.qualityGatesClient.DeleteCondition(instance.GenerateDeleteQualityGateConditionOption(conditionObservation.ID)) //nolint:bodyclose // closed via helpers.CloseBody
+		defer helpers.CloseBody(deleteResponse)
+		if err != nil {
+			return errors.Wrapf(err, "cannot delete SonarQube Quality Gate Condition with ID %s", conditionObservation.ID)
+		}
+		// Delete the condition from the associations map after successful deletion
+		delete(qualityGateConditionAssociations, conditionObservation.ID)
+	}
+	return nil
+}
+
+// createMissingQualityGateConditions creates Quality Gate Conditions that are specified but do not exist
+func (c *external) createMissingQualityGateConditions(externalName string, qualityGateConditionAssociations map[string]instance.QualityGateConditionAssociation) error {
+	nonExistingQualityGateConditions := instance.FindNonExistingQualityGateConditions(qualityGateConditionAssociations)
+	for _, conditionSpec := range nonExistingQualityGateConditions {
+		if conditionSpec == nil {
+			continue
+		}
+
+		// Find the old key for this spec (likely "new:{metric}")
+		var oldKey string
+		for key, assoc := range qualityGateConditionAssociations {
+			if assoc.Spec == conditionSpec {
+				oldKey = key
+				break
+			}
+		}
+
+		qualityGateCondition, createResponse, err := c.qualityGatesClient.CreateCondition(instance.GenerateCreateQualityGateConditionOption(externalName, *conditionSpec)) //nolint:bodyclose // closed via helpers.CloseBody
+		defer helpers.CloseBody(createResponse)
+		if err != nil {
+			return errors.Wrapf(err, "cannot create SonarQube Quality Gate Condition for Quality Gate %s", externalName)
+		}
+		conditionObservation := instance.GenerateQualityGateConditionObservationFromCreate(qualityGateCondition)
+
+		// Remove the old "new:{metric}" key from the associations map
+		if oldKey != "" {
+			delete(qualityGateConditionAssociations, oldKey)
+		}
+
+		// Add the new condition to the associations map with the real ID as the key
+		// Note: Late initialization of the spec happens in Observe, not here
+		qualityGateConditionAssociations[qualityGateCondition.ID] = instance.QualityGateConditionAssociation{
+			Spec:        conditionSpec,
+			Observation: conditionObservation,
+			UpToDate:    true,
+		}
+	}
+	return nil
+}
+
+// updateOutdatedQualityGateConditions updates Quality Gate Conditions that are out of date
+func (c *external) updateOutdatedQualityGateConditions(qualityGateConditionAssociations map[string]instance.QualityGateConditionAssociation) error {
+	outdatedQualityGateConditions := instance.FindNotUpToDateQualityGateConditions(qualityGateConditionAssociations)
+	for _, association := range outdatedQualityGateConditions {
+		if association.Spec == nil || association.Observation == nil {
+			continue
+		}
+		updateResponse, err := c.qualityGatesClient.UpdateCondition(instance.GenerateUpdateQualityGateConditionOption(association.Observation.ID, *association.Spec)) //nolint:bodyclose // closed via helpers.CloseBody
+		defer helpers.CloseBody(updateResponse)
+		if err != nil {
+			return errors.Wrapf(err, "cannot update SonarQube Quality Gate Condition with ID %s", *association.Spec.Id)
+		}
+	}
+	return nil
 }
 
 // Create creates the external resource and sets the external name
@@ -248,6 +361,13 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		if err != nil {
 			return managed.ExternalUpdate{}, errors.Wrap(err, errDefaultQualityGate)
 		}
+	}
+
+	associations := instance.GenerateQualityGateConditionsAssociation(cr.Spec.ForProvider.Conditions, cr.Status.AtProvider.Conditions)
+
+	// Sync Quality Gate Conditions
+	if err := c.syncQualityGateConditions(cr, associations); err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "cannot sync Quality Gate Conditions")
 	}
 
 	return managed.ExternalUpdate{}, nil

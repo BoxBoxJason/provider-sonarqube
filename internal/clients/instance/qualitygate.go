@@ -80,7 +80,7 @@ func GenerateQualityGateActionsObservation(actions *sonargo.QualitygatesShowObje
 }
 
 // IsQualityGateUpToDate checks if the Quality Gate spec is up to date with the observed state
-func IsQualityGateUpToDate(spec *v1alpha1.QualityGateParameters, observation *v1alpha1.QualityGateObservation) bool {
+func IsQualityGateUpToDate(spec *v1alpha1.QualityGateParameters, observation *v1alpha1.QualityGateObservation, associations map[string]QualityGateConditionAssociation) bool {
 	if spec == nil {
 		return true
 	}
@@ -96,14 +96,55 @@ func IsQualityGateUpToDate(spec *v1alpha1.QualityGateParameters, observation *v1
 		return false
 	}
 
+	if !AreQualityGateConditionsUpToDate(associations) {
+		return false
+	}
+
 	return true
 }
 
 // LateInitializeQualityGate fills the spec with the observed state if the spec fields are nil
+// It also late-initializes condition IDs by matching conditions by their metric, error, and op fields
 func LateInitializeQualityGate(spec *v1alpha1.QualityGateParameters, observation *v1alpha1.QualityGateObservation) {
 	if spec == nil || observation == nil {
 		return
 	}
 
 	helpers.AssignIfNil(&spec.Default, observation.IsDefault)
+
+	// Late-initialize condition IDs by matching on metric, error, and op
+	for i := range spec.Conditions {
+		if spec.Conditions[i].Id != nil {
+			// Already has an ID, skip
+			continue
+		}
+
+		// Find matching observation by metric, error, and op
+		for j := range observation.Conditions {
+			if spec.Conditions[i].Metric == observation.Conditions[j].Metric &&
+				spec.Conditions[i].Error == observation.Conditions[j].Error &&
+				helpers.IsComparablePtrEqualComparable(spec.Conditions[i].Op, observation.Conditions[j].Op) {
+				// Found a match, late-initialize the ID
+				spec.Conditions[i].Id = &observation.Conditions[j].ID
+				break
+			}
+		}
+	}
+}
+
+// WereQualityGateConditionsLateInitialized checks if any conditions had their IDs late-initialized
+// by comparing the before and after states
+func WereQualityGateConditionsLateInitialized(before, after []v1alpha1.QualityGateConditionParameters) bool {
+	if len(before) != len(after) {
+		return true
+	}
+
+	// Check if any condition that didn't have an ID now has one
+	for i := range before {
+		if !helpers.IsComparablePtrEqualComparablePtr(before[i].Id, after[i].Id) || !helpers.IsComparablePtrEqualComparablePtr(before[i].Op, after[i].Op) {
+			return true
+		}
+	}
+
+	return false
 }

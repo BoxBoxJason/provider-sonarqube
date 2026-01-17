@@ -198,55 +198,80 @@ func TestGenerateQualityGateActionsObservation(t *testing.T) {
 
 func TestIsQualityGateUpToDate(t *testing.T) {
 	tests := map[string]struct {
-		spec        *v1alpha1.QualityGateParameters
-		observation *v1alpha1.QualityGateObservation
-		want        bool
+		spec         *v1alpha1.QualityGateParameters
+		observation  *v1alpha1.QualityGateObservation
+		associations map[string]QualityGateConditionAssociation
+		want         bool
 	}{
 		"NilSpecReturnsTrue": {
-			spec:        nil,
-			observation: &v1alpha1.QualityGateObservation{Name: "test"},
-			want:        true,
+			spec:         nil,
+			observation:  &v1alpha1.QualityGateObservation{Name: "test"},
+			associations: nil,
+			want:         true,
 		},
 		"NilObservationReturnsFalse": {
-			spec:        &v1alpha1.QualityGateParameters{Name: "test"},
-			observation: nil,
-			want:        false,
+			spec:         &v1alpha1.QualityGateParameters{Name: "test"},
+			observation:  nil,
+			associations: nil,
+			want:         false,
 		},
 		"MatchingNameReturnsTrue": {
-			spec:        &v1alpha1.QualityGateParameters{Name: "test"},
-			observation: &v1alpha1.QualityGateObservation{Name: "test"},
-			want:        true,
+			spec:         &v1alpha1.QualityGateParameters{Name: "test"},
+			observation:  &v1alpha1.QualityGateObservation{Name: "test"},
+			associations: nil,
+			want:         true,
 		},
 		"DifferentNameReturnsFalse": {
-			spec:        &v1alpha1.QualityGateParameters{Name: "test"},
-			observation: &v1alpha1.QualityGateObservation{Name: "different"},
-			want:        false,
+			spec:         &v1alpha1.QualityGateParameters{Name: "test"},
+			observation:  &v1alpha1.QualityGateObservation{Name: "different"},
+			associations: nil,
+			want:         false,
 		},
 		"MatchingDefaultReturnsTrue": {
-			spec:        &v1alpha1.QualityGateParameters{Name: "test", Default: ptr.To(true)},
-			observation: &v1alpha1.QualityGateObservation{Name: "test", IsDefault: true},
-			want:        true,
+			spec:         &v1alpha1.QualityGateParameters{Name: "test", Default: ptr.To(true)},
+			observation:  &v1alpha1.QualityGateObservation{Name: "test", IsDefault: true},
+			associations: nil,
+			want:         true,
 		},
 		"DifferentDefaultReturnsFalse": {
-			spec:        &v1alpha1.QualityGateParameters{Name: "test", Default: ptr.To(true)},
-			observation: &v1alpha1.QualityGateObservation{Name: "test", IsDefault: false},
-			want:        false,
+			spec:         &v1alpha1.QualityGateParameters{Name: "test", Default: ptr.To(true)},
+			observation:  &v1alpha1.QualityGateObservation{Name: "test", IsDefault: false},
+			associations: nil,
+			want:         false,
 		},
 		"NilDefaultWithObservedFalseReturnsTrue": {
-			spec:        &v1alpha1.QualityGateParameters{Name: "test", Default: nil},
-			observation: &v1alpha1.QualityGateObservation{Name: "test", IsDefault: false},
-			want:        true,
+			spec:         &v1alpha1.QualityGateParameters{Name: "test", Default: nil},
+			observation:  &v1alpha1.QualityGateObservation{Name: "test", IsDefault: false},
+			associations: nil,
+			want:         true,
 		},
 		"NilDefaultWithObservedTrueReturnsTrue": {
-			spec:        &v1alpha1.QualityGateParameters{Name: "test", Default: nil},
-			observation: &v1alpha1.QualityGateObservation{Name: "test", IsDefault: true},
-			want:        true,
+			spec:         &v1alpha1.QualityGateParameters{Name: "test", Default: nil},
+			observation:  &v1alpha1.QualityGateObservation{Name: "test", IsDefault: true},
+			associations: nil,
+			want:         true,
+		},
+		"ConditionsNotUpToDateReturnsFalse": {
+			spec:        &v1alpha1.QualityGateParameters{Name: "test"},
+			observation: &v1alpha1.QualityGateObservation{Name: "test"},
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {UpToDate: false},
+			},
+			want: false,
+		},
+		"ConditionsUpToDateReturnsTrue": {
+			spec:        &v1alpha1.QualityGateParameters{Name: "test"},
+			observation: &v1alpha1.QualityGateObservation{Name: "test"},
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {UpToDate: true},
+			},
+			want: true,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := IsQualityGateUpToDate(tc.spec, tc.observation)
+			got := IsQualityGateUpToDate(tc.spec, tc.observation, tc.associations)
 			if got != tc.want {
 				t.Errorf("IsQualityGateUpToDate() = %v, want %v", got, tc.want)
 			}
@@ -256,9 +281,10 @@ func TestIsQualityGateUpToDate(t *testing.T) {
 
 func TestLateInitializeQualityGate(t *testing.T) {
 	tests := map[string]struct {
-		spec        *v1alpha1.QualityGateParameters
-		observation *v1alpha1.QualityGateObservation
-		wantDefault *bool
+		spec           *v1alpha1.QualityGateParameters
+		observation    *v1alpha1.QualityGateObservation
+		wantDefault    *bool
+		wantConditions []v1alpha1.QualityGateConditionParameters
 	}{
 		"NilSpecDoesNothing": {
 			spec:        nil,
@@ -280,6 +306,84 @@ func TestLateInitializeQualityGate(t *testing.T) {
 			observation: &v1alpha1.QualityGateObservation{IsDefault: true},
 			wantDefault: ptr.To(false),
 		},
+		"ConditionWithoutIdGetsInitialized": {
+			spec: &v1alpha1.QualityGateParameters{
+				Name: "test",
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+				},
+			},
+			observation: &v1alpha1.QualityGateObservation{
+				IsDefault: false,
+				Conditions: []v1alpha1.QualityGateConditionObservation{
+					{ID: "condition-123", Metric: "coverage", Error: "80", Op: "LT"},
+				},
+			},
+			wantDefault: ptr.To(false),
+			wantConditions: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("condition-123"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+			},
+		},
+		"ConditionWithIdNotOverwritten": {
+			spec: &v1alpha1.QualityGateParameters{
+				Name: "test",
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Id: ptr.To("existing-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+				},
+			},
+			observation: &v1alpha1.QualityGateObservation{
+				IsDefault: false,
+				Conditions: []v1alpha1.QualityGateConditionObservation{
+					{ID: "different-id", Metric: "coverage", Error: "80", Op: "LT"},
+				},
+			},
+			wantDefault: ptr.To(false),
+			wantConditions: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("existing-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+			},
+		},
+		"MultipleConditionsMatchedCorrectly": {
+			spec: &v1alpha1.QualityGateParameters{
+				Name: "test",
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+					{Metric: "bugs", Error: "0", Op: ptr.To("GT")},
+					{Id: ptr.To("existing-id"), Metric: "duplicated_lines", Error: "3"},
+				},
+			},
+			observation: &v1alpha1.QualityGateObservation{
+				IsDefault: false,
+				Conditions: []v1alpha1.QualityGateConditionObservation{
+					{ID: "cov-id", Metric: "coverage", Error: "80", Op: "LT"},
+					{ID: "bugs-id", Metric: "bugs", Error: "0", Op: "GT"},
+					{ID: "dup-id", Metric: "duplicated_lines", Error: "3", Op: ""},
+				},
+			},
+			wantDefault: ptr.To(false),
+			wantConditions: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("cov-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+				{Id: ptr.To("bugs-id"), Metric: "bugs", Error: "0", Op: ptr.To("GT")},
+				{Id: ptr.To("existing-id"), Metric: "duplicated_lines", Error: "3"},
+			},
+		},
+		"NoMatchingConditionLeavesIdNil": {
+			spec: &v1alpha1.QualityGateParameters{
+				Name: "test",
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+				},
+			},
+			observation: &v1alpha1.QualityGateObservation{
+				IsDefault: false,
+				Conditions: []v1alpha1.QualityGateConditionObservation{
+					{ID: "other-id", Metric: "bugs", Error: "0", Op: "GT"},
+				},
+			},
+			wantDefault: ptr.To(false),
+			wantConditions: []v1alpha1.QualityGateConditionParameters{
+				{Id: nil, Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+			},
+		},
 	}
 
 	for name, tc := range tests {
@@ -298,6 +402,83 @@ func TestLateInitializeQualityGate(t *testing.T) {
 			}
 			if tc.wantDefault != nil && tc.spec.Default != nil && *tc.spec.Default != *tc.wantDefault {
 				t.Errorf("LateInitializeQualityGate() Default = %v, want %v", *tc.spec.Default, *tc.wantDefault)
+			}
+
+			// Check conditions if expected
+			if tc.wantConditions != nil {
+				if diff := cmp.Diff(tc.wantConditions, tc.spec.Conditions); diff != "" {
+					t.Errorf("LateInitializeQualityGate() Conditions mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestWereQualityGateConditionsLateInitialized(t *testing.T) {
+	tests := map[string]struct {
+		before []v1alpha1.QualityGateConditionParameters
+		after  []v1alpha1.QualityGateConditionParameters
+		want   bool
+	}{
+		"NoConditionsReturnsFalse": {
+			before: []v1alpha1.QualityGateConditionParameters{},
+			after:  []v1alpha1.QualityGateConditionParameters{},
+			want:   false,
+		},
+		"DifferentLengthReturnsTrue": {
+			before: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80"},
+			},
+			after: []v1alpha1.QualityGateConditionParameters{},
+			want:  true,
+		},
+		"IdAddedReturnsTrue": {
+			before: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80", Id: nil},
+			},
+			after: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80", Id: ptr.To("new-id")},
+			},
+			want: true,
+		},
+		"IdAlreadyPresentReturnsFalse": {
+			before: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80", Id: ptr.To("existing-id")},
+			},
+			after: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80", Id: ptr.To("existing-id")},
+			},
+			want: false,
+		},
+		"MultipleConditionsOneInitializedReturnsTrue": {
+			before: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80", Id: ptr.To("id-1")},
+				{Metric: "bugs", Error: "0", Id: nil},
+			},
+			after: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80", Id: ptr.To("id-1")},
+				{Metric: "bugs", Error: "0", Id: ptr.To("id-2")},
+			},
+			want: true,
+		},
+		"NoChangesReturnsFalse": {
+			before: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80", Id: ptr.To("id-1")},
+				{Metric: "bugs", Error: "0", Id: ptr.To("id-2")},
+			},
+			after: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80", Id: ptr.To("id-1")},
+				{Metric: "bugs", Error: "0", Id: ptr.To("id-2")},
+			},
+			want: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := WereQualityGateConditionsLateInitialized(tc.before, tc.after)
+			if got != tc.want {
+				t.Errorf("WereQualityGateConditionsLateInitialized() = %v, want %v", got, tc.want)
 			}
 		})
 	}

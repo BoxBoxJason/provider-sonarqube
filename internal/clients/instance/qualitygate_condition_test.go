@@ -12,11 +12,11 @@ import (
 
 func TestGenerateQualityGateConditionObservation(t *testing.T) {
 	tests := map[string]struct {
-		condition sonargo.QualitygatesShowObject_sub2
+		condition *sonargo.QualitygatesShowObject_sub2
 		want      v1alpha1.QualityGateConditionObservation
 	}{
 		"BasicCondition": {
-			condition: sonargo.QualitygatesShowObject_sub2{
+			condition: &sonargo.QualitygatesShowObject_sub2{
 				ID:     "123",
 				Metric: "coverage",
 				Op:     "LT",
@@ -30,11 +30,11 @@ func TestGenerateQualityGateConditionObservation(t *testing.T) {
 			},
 		},
 		"EmptyCondition": {
-			condition: sonargo.QualitygatesShowObject_sub2{},
+			condition: &sonargo.QualitygatesShowObject_sub2{},
 			want:      v1alpha1.QualityGateConditionObservation{},
 		},
 		"ConditionWithGTOperator": {
-			condition: sonargo.QualitygatesShowObject_sub2{
+			condition: &sonargo.QualitygatesShowObject_sub2{
 				ID:     "456",
 				Metric: "duplicated_lines_density",
 				Op:     "GT",
@@ -100,72 +100,17 @@ func TestGenerateQualityGateConditionsObservation(t *testing.T) {
 	}
 }
 
-func TestFindQualityGateConditionObservation(t *testing.T) {
-	conditions := []sonargo.QualitygatesShowObject_sub2{
-		{ID: "1", Metric: "coverage", Op: "LT", Error: "80"},
-		{ID: "2", Metric: "duplicated_lines_density", Op: "GT", Error: "3"},
-	}
-
-	tests := map[string]struct {
-		id        string
-		condition []sonargo.QualitygatesShowObject_sub2
-		want      v1alpha1.QualityGateConditionObservation
-		wantErr   bool
-	}{
-		"FoundFirstCondition": {
-			id:        "1",
-			condition: conditions,
-			want:      v1alpha1.QualityGateConditionObservation{ID: "1", Metric: "coverage", Op: "LT", Error: "80"},
-			wantErr:   false,
-		},
-		"FoundSecondCondition": {
-			id:        "2",
-			condition: conditions,
-			want:      v1alpha1.QualityGateConditionObservation{ID: "2", Metric: "duplicated_lines_density", Op: "GT", Error: "3"},
-			wantErr:   false,
-		},
-		"NotFoundReturnsError": {
-			id:        "999",
-			condition: conditions,
-			want:      v1alpha1.QualityGateConditionObservation{},
-			wantErr:   true,
-		},
-		"EmptySliceReturnsError": {
-			id:        "1",
-			condition: []sonargo.QualitygatesShowObject_sub2{},
-			want:      v1alpha1.QualityGateConditionObservation{},
-			wantErr:   true,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			got, err := FindQualityGateConditionObservation(tc.id, tc.condition)
-			if (err != nil) != tc.wantErr {
-				t.Errorf("FindQualityGateConditionObservation() error = %v, wantErr %v", err, tc.wantErr)
-				return
-			}
-			if !tc.wantErr {
-				if diff := cmp.Diff(tc.want, got); diff != "" {
-					t.Errorf("FindQualityGateConditionObservation() mismatch (-want +got):\n%s", diff)
-				}
-			}
-		})
-	}
-}
-
 func TestGenerateCreateQualityGateConditionOption(t *testing.T) {
 	tests := map[string]struct {
 		params v1alpha1.QualityGateConditionParameters
-		want   sonargo.QualitygatesCreateConditionOption
+		want   *sonargo.QualitygatesCreateConditionOption
 	}{
 		"BasicCondition": {
 			params: v1alpha1.QualityGateConditionParameters{
-				QualityGateName: ptr.To("my-gate"),
-				Metric:          "coverage",
-				Error:           "80",
+				Metric: "coverage",
+				Error:  "80",
 			},
-			want: sonargo.QualitygatesCreateConditionOption{
+			want: &sonargo.QualitygatesCreateConditionOption{
 				GateName: "my-gate",
 				Metric:   "coverage",
 				Error:    "80",
@@ -173,12 +118,11 @@ func TestGenerateCreateQualityGateConditionOption(t *testing.T) {
 		},
 		"ConditionWithOperator": {
 			params: v1alpha1.QualityGateConditionParameters{
-				QualityGateName: ptr.To("my-gate"),
-				Metric:          "coverage",
-				Error:           "80",
-				Op:              ptr.To("LT"),
+				Metric: "coverage",
+				Error:  "80",
+				Op:     ptr.To("LT"),
 			},
-			want: sonargo.QualitygatesCreateConditionOption{
+			want: &sonargo.QualitygatesCreateConditionOption{
 				GateName: "my-gate",
 				Metric:   "coverage",
 				Error:    "80",
@@ -187,12 +131,11 @@ func TestGenerateCreateQualityGateConditionOption(t *testing.T) {
 		},
 		"ConditionWithGTOperator": {
 			params: v1alpha1.QualityGateConditionParameters{
-				QualityGateName: ptr.To("another-gate"),
-				Metric:          "duplicated_lines_density",
-				Error:           "3",
-				Op:              ptr.To("GT"),
+				Metric: "duplicated_lines_density",
+				Error:  "3",
+				Op:     ptr.To("GT"),
 			},
-			want: sonargo.QualitygatesCreateConditionOption{
+			want: &sonargo.QualitygatesCreateConditionOption{
 				GateName: "another-gate",
 				Metric:   "duplicated_lines_density",
 				Error:    "3",
@@ -203,7 +146,7 @@ func TestGenerateCreateQualityGateConditionOption(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := GenerateCreateQualityGateConditionOption(tc.params)
+			got := GenerateCreateQualityGateConditionOption(tc.want.GateName, tc.params)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("GenerateCreateQualityGateConditionOption() mismatch (-want +got):\n%s", diff)
 			}
@@ -215,16 +158,15 @@ func TestGenerateUpdateQualityGateConditionOption(t *testing.T) {
 	tests := map[string]struct {
 		id     string
 		params v1alpha1.QualityGateConditionParameters
-		want   sonargo.QualitygatesUpdateConditionOption
+		want   *sonargo.QualitygatesUpdateConditionOption
 	}{
 		"BasicUpdate": {
 			id: "123",
 			params: v1alpha1.QualityGateConditionParameters{
-				QualityGateName: ptr.To("my-gate"),
-				Metric:          "coverage",
-				Error:           "85",
+				Metric: "coverage",
+				Error:  "85",
 			},
-			want: sonargo.QualitygatesUpdateConditionOption{
+			want: &sonargo.QualitygatesUpdateConditionOption{
 				Id:     "123",
 				Metric: "coverage",
 				Error:  "85",
@@ -233,12 +175,11 @@ func TestGenerateUpdateQualityGateConditionOption(t *testing.T) {
 		"UpdateWithOperator": {
 			id: "456",
 			params: v1alpha1.QualityGateConditionParameters{
-				QualityGateName: ptr.To("my-gate"),
-				Metric:          "duplicated_lines_density",
-				Error:           "5",
-				Op:              ptr.To("GT"),
+				Metric: "duplicated_lines_density",
+				Error:  "5",
+				Op:     ptr.To("GT"),
 			},
-			want: sonargo.QualitygatesUpdateConditionOption{
+			want: &sonargo.QualitygatesUpdateConditionOption{
 				Id:     "456",
 				Metric: "duplicated_lines_density",
 				Error:  "5",
@@ -417,6 +358,314 @@ func TestLateInitializeQualityGateCondition(t *testing.T) {
 			}
 			if tc.wantOp != nil && tc.params.Op != nil && *tc.params.Op != *tc.wantOp {
 				t.Errorf("LateInitializeQualityGateCondition() Op = %v, want %v", *tc.params.Op, *tc.wantOp)
+			}
+		})
+	}
+}
+
+func TestGenerateQualityGateConditionsAssociation(t *testing.T) {
+	tests := map[string]struct {
+		specs        []v1alpha1.QualityGateConditionParameters
+		observations []v1alpha1.QualityGateConditionObservation
+		wantKeys     []string
+	}{
+		"EmptyInputsReturnsEmptyMap": {
+			specs:        []v1alpha1.QualityGateConditionParameters{},
+			observations: []v1alpha1.QualityGateConditionObservation{},
+			wantKeys:     []string{},
+		},
+		"OnlyObservationsCreatesOrphanedEntries": {
+			specs: []v1alpha1.QualityGateConditionParameters{},
+			observations: []v1alpha1.QualityGateConditionObservation{
+				{ID: "1", Metric: "coverage"},
+				{ID: "2", Metric: "duplicated_lines"},
+			},
+			wantKeys: []string{"1", "2"},
+		},
+		"SpecsWithIDsMatchObservations": {
+			specs: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("1"), Metric: "coverage", Error: "80"},
+			},
+			observations: []v1alpha1.QualityGateConditionObservation{
+				{ID: "1", Metric: "coverage", Error: "80"},
+			},
+			wantKeys: []string{"1"},
+		},
+		"SpecsWithoutIDsCreateNewEntries": {
+			specs: []v1alpha1.QualityGateConditionParameters{
+				{Metric: "coverage", Error: "80"},
+			},
+			observations: []v1alpha1.QualityGateConditionObservation{},
+			wantKeys:     []string{"new:coverage"},
+		},
+		"MixedSpecsAndObservations": {
+			specs: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("1"), Metric: "coverage", Error: "80"},
+				{Metric: "new_metric", Error: "50"},
+			},
+			observations: []v1alpha1.QualityGateConditionObservation{
+				{ID: "1", Metric: "coverage", Error: "80"},
+				{ID: "2", Metric: "orphaned", Error: "10"},
+			},
+			wantKeys: []string{"1", "2", "new:new_metric"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := GenerateQualityGateConditionsAssociation(tc.specs, tc.observations)
+			if len(got) != len(tc.wantKeys) {
+				t.Errorf("GenerateQualityGateConditionsAssociation() returned %d associations, want %d", len(got), len(tc.wantKeys))
+			}
+			for _, key := range tc.wantKeys {
+				if _, exists := got[key]; !exists {
+					t.Errorf("GenerateQualityGateConditionsAssociation() missing key %q", key)
+				}
+			}
+		})
+	}
+}
+
+func TestAreQualityGateConditionsUpToDate(t *testing.T) {
+	tests := map[string]struct {
+		associations map[string]QualityGateConditionAssociation
+		want         bool
+	}{
+		"EmptyMapReturnsTrue": {
+			associations: map[string]QualityGateConditionAssociation{},
+			want:         true,
+		},
+		"NilMapReturnsTrue": {
+			associations: nil,
+			want:         true,
+		},
+		"AllUpToDateReturnsTrue": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {UpToDate: true},
+				"2": {UpToDate: true},
+			},
+			want: true,
+		},
+		"AnyNotUpToDateReturnsFalse": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {UpToDate: true},
+				"2": {UpToDate: false},
+			},
+			want: false,
+		},
+		"SingleNotUpToDateReturnsFalse": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {UpToDate: false},
+			},
+			want: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := AreQualityGateConditionsUpToDate(tc.associations)
+			if got != tc.want {
+				t.Errorf("AreQualityGateConditionsUpToDate() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFindNonExistingQualityGateConditions(t *testing.T) {
+	tests := map[string]struct {
+		associations map[string]QualityGateConditionAssociation
+		wantCount    int
+	}{
+		"EmptyMapReturnsEmpty": {
+			associations: map[string]QualityGateConditionAssociation{},
+			wantCount:    0,
+		},
+		"AllExistingReturnsEmpty": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "1"},
+					Spec:        &v1alpha1.QualityGateConditionParameters{Id: ptr.To("1")},
+				},
+			},
+			wantCount: 0,
+		},
+		"NonExistingReturnsSpecs": {
+			associations: map[string]QualityGateConditionAssociation{
+				"new:coverage": {
+					Observation: nil,
+					Spec:        &v1alpha1.QualityGateConditionParameters{Metric: "coverage"},
+				},
+			},
+			wantCount: 1,
+		},
+		"MixedReturnsOnlyNonExisting": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "1"},
+					Spec:        &v1alpha1.QualityGateConditionParameters{Id: ptr.To("1")},
+				},
+				"new:metric": {
+					Observation: nil,
+					Spec:        &v1alpha1.QualityGateConditionParameters{Metric: "metric"},
+				},
+			},
+			wantCount: 1,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := FindNonExistingQualityGateConditions(tc.associations)
+			if len(got) != tc.wantCount {
+				t.Errorf("FindNonExistingQualityGateConditions() returned %d, want %d", len(got), tc.wantCount)
+			}
+		})
+	}
+}
+
+func TestFindMissingQualityGateConditions(t *testing.T) {
+	tests := map[string]struct {
+		associations map[string]QualityGateConditionAssociation
+		wantCount    int
+	}{
+		"EmptyMapReturnsEmpty": {
+			associations: map[string]QualityGateConditionAssociation{},
+			wantCount:    0,
+		},
+		"AllMatchedReturnsEmpty": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "1"},
+					Spec:        &v1alpha1.QualityGateConditionParameters{Id: ptr.To("1")},
+				},
+			},
+			wantCount: 0,
+		},
+		"OrphanedObservationsReturnsMissing": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "1"},
+					Spec:        nil,
+				},
+			},
+			wantCount: 1,
+		},
+		"MixedReturnsOnlyOrphaned": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "1"},
+					Spec:        &v1alpha1.QualityGateConditionParameters{Id: ptr.To("1")},
+				},
+				"2": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "2"},
+					Spec:        nil,
+				},
+			},
+			wantCount: 1,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := FindMissingQualityGateConditions(tc.associations)
+			if len(got) != tc.wantCount {
+				t.Errorf("FindMissingQualityGateConditions() returned %d, want %d", len(got), tc.wantCount)
+			}
+		})
+	}
+}
+
+func TestFindNotUpToDateQualityGateConditions(t *testing.T) {
+	tests := map[string]struct {
+		associations map[string]QualityGateConditionAssociation
+		wantCount    int
+	}{
+		"EmptyMapReturnsEmpty": {
+			associations: map[string]QualityGateConditionAssociation{},
+			wantCount:    0,
+		},
+		"AllUpToDateReturnsEmpty": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "1"},
+					Spec:        &v1alpha1.QualityGateConditionParameters{Id: ptr.To("1")},
+					UpToDate:    true,
+				},
+			},
+			wantCount: 0,
+		},
+		"NotUpToDateWithBothSpecAndObservation": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "1", Error: "80"},
+					Spec:        &v1alpha1.QualityGateConditionParameters{Id: ptr.To("1"), Error: "90"},
+					UpToDate:    false,
+				},
+			},
+			wantCount: 1,
+		},
+		"NotUpToDateButMissingObservationReturnsEmpty": {
+			associations: map[string]QualityGateConditionAssociation{
+				"new:coverage": {
+					Observation: nil,
+					Spec:        &v1alpha1.QualityGateConditionParameters{Metric: "coverage"},
+					UpToDate:    false,
+				},
+			},
+			wantCount: 0,
+		},
+		"NotUpToDateButMissingSpecReturnsEmpty": {
+			associations: map[string]QualityGateConditionAssociation{
+				"1": {
+					Observation: &v1alpha1.QualityGateConditionObservation{ID: "1"},
+					Spec:        nil,
+					UpToDate:    false,
+				},
+			},
+			wantCount: 0,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := FindNotUpToDateQualityGateConditions(tc.associations)
+			if len(got) != tc.wantCount {
+				t.Errorf("FindNotUpToDateQualityGateConditions() returned %d, want %d", len(got), tc.wantCount)
+			}
+		})
+	}
+}
+
+func TestGenerateQualityGateConditionObservationFromCreate(t *testing.T) {
+	tests := map[string]struct {
+		condition *sonargo.QualitygatesCreateConditionObject
+		want      *v1alpha1.QualityGateConditionObservation
+	}{
+		"BasicCondition": {
+			condition: &sonargo.QualitygatesCreateConditionObject{
+				ID:     "123",
+				Metric: "coverage",
+				Op:     "LT",
+				Error:  "80",
+			},
+			want: &v1alpha1.QualityGateConditionObservation{
+				ID:     "123",
+				Metric: "coverage",
+				Op:     "LT",
+				Error:  "80",
+			},
+		},
+		"EmptyCondition": {
+			condition: &sonargo.QualitygatesCreateConditionObject{},
+			want:      &v1alpha1.QualityGateConditionObservation{},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := GenerateQualityGateConditionObservationFromCreate(tc.condition)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("GenerateQualityGateConditionObservationFromCreate() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
