@@ -112,6 +112,10 @@ func buildConfigFromSpec(ctx context.Context, kubeClient client.Client, managedR
 			return nil, err
 		}
 
+		if token == nil || *token == "" {
+			return nil, errors.New("credentials secret key is empty")
+		}
+
 		return &Config{
 			BaseURL:            spec.BaseURL,
 			Token:              *token,

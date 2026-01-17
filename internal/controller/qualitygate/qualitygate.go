@@ -41,6 +41,7 @@ import (
 	apisv1alpha1 "github.com/crossplane/provider-sonarqube/apis/v1alpha1"
 	"github.com/crossplane/provider-sonarqube/internal/clients/common"
 	"github.com/crossplane/provider-sonarqube/internal/clients/instance"
+	"github.com/crossplane/provider-sonarqube/internal/helpers"
 )
 
 const (
@@ -168,9 +169,10 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 
 	// Retrieve the Quality Gate from SonarQube
-	qualityGate, _, err := c.qualityGatesClient.Show(&sonargo.QualitygatesShowOption{
+	qualityGate, resp, err := c.qualityGatesClient.Show(&sonargo.QualitygatesShowOption{ //nolint:bodyclose // closed via helpers.CloseBody
 		Name: externalName,
 	})
+	defer helpers.CloseBody(resp)
 	if err != nil {
 		return managed.ExternalObservation{ResourceExists: false}, errors.Wrap(err, errShowQualityGate)
 	}
@@ -201,7 +203,8 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 
 	qualityGateCreateOptions := instance.GenerateQualityGateCreateOptions(cr.Spec.ForProvider)
 
-	qualityGate, _, err := c.qualityGatesClient.Create(qualityGateCreateOptions)
+	qualityGate, resp, err := c.qualityGatesClient.Create(qualityGateCreateOptions) //nolint:bodyclose // closed via helpers.CloseBody
+	defer helpers.CloseBody(resp)
 	if err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, errCreateQualityGate)
 	}
@@ -211,9 +214,10 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 
 	// Set Quality Gate as default if specified in the spec
 	if cr.Spec.ForProvider.Default != nil && *cr.Spec.ForProvider.Default {
-		_, err = c.qualityGatesClient.SetAsDefault(&sonargo.QualitygatesSetAsDefaultOption{
+		setDefaultResp, err := c.qualityGatesClient.SetAsDefault(&sonargo.QualitygatesSetAsDefaultOption{ //nolint:bodyclose // closed via helpers.CloseBody
 			Name: cr.Name,
 		})
+		defer helpers.CloseBody(setDefaultResp)
 		if err != nil {
 			return managed.ExternalCreation{}, errors.Wrap(err, errDefaultQualityGate)
 		}
@@ -236,10 +240,11 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 
 	// Call rename endpoint if the name has changed
 	if cr.Spec.ForProvider.Name != externalName {
-		_, err := c.qualityGatesClient.Rename(&sonargo.QualitygatesRenameOption{
+		renameResp, err := c.qualityGatesClient.Rename(&sonargo.QualitygatesRenameOption{ //nolint:bodyclose // closed via helpers.CloseBody
 			CurrentName: externalName,
 			Name:        cr.Spec.ForProvider.Name,
 		})
+		defer helpers.CloseBody(renameResp)
 		if err != nil {
 			return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateQualityGate)
 		}
@@ -250,9 +255,10 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 
 	// Set Quality Gate as default if specified in the spec (idempotent)
 	if cr.Spec.ForProvider.Default != nil && *cr.Spec.ForProvider.Default {
-		_, err := c.qualityGatesClient.SetAsDefault(&sonargo.QualitygatesSetAsDefaultOption{
+		updateSetDefaultResp, err := c.qualityGatesClient.SetAsDefault(&sonargo.QualitygatesSetAsDefaultOption{ //nolint:bodyclose // closed via helpers.CloseBody
 			Name: cr.Spec.ForProvider.Name,
 		})
+		defer helpers.CloseBody(updateSetDefaultResp)
 		if err != nil {
 			return managed.ExternalUpdate{}, errors.Wrap(err, errDefaultQualityGate)
 		}
@@ -276,9 +282,10 @@ func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalDelete{}, nil
 	}
 
-	_, err := c.qualityGatesClient.Destroy(&sonargo.QualitygatesDestroyOption{
+	destroyResp, err := c.qualityGatesClient.Destroy(&sonargo.QualitygatesDestroyOption{ //nolint:bodyclose // closed via helpers.CloseBody
 		Name: cr.Name,
 	})
+	defer helpers.CloseBody(destroyResp)
 	if err != nil {
 		return managed.ExternalDelete{}, errors.Wrap(err, errDeleteQualityGate)
 	}

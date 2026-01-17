@@ -1,6 +1,21 @@
 package helpers
 
-import "github.com/google/go-cmp/cmp"
+import (
+	"io"
+	"net/http"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+// CloseBody closes the body of an http.Response safely.
+// If the response or body is nil, it does nothing.
+// The error return value of Close is intentionally ignored.
+func CloseBody(resp *http.Response) {
+	if resp != nil && resp.Body != nil {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}
+}
 
 // IsComparablePtrEqualComparable compares a pointer to a comparable type with a comparable type.
 // If the pointer is nil, it returns true.

@@ -41,6 +41,7 @@ import (
 	apisv1alpha1 "github.com/crossplane/provider-sonarqube/apis/v1alpha1"
 	"github.com/crossplane/provider-sonarqube/internal/clients/common"
 	"github.com/crossplane/provider-sonarqube/internal/clients/instance"
+	"github.com/crossplane/provider-sonarqube/internal/helpers"
 )
 
 const (
@@ -167,9 +168,10 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 
 	// Retrieve the Quality Gate from SonarQube
-	qualityGate, _, err := c.qualityGatesClient.Show(&sonargo.QualitygatesShowOption{
+	qualityGate, resp, err := c.qualityGatesClient.Show(&sonargo.QualitygatesShowOption{ //nolint:bodyclose // closed via helpers.CloseBody
 		Name: externalName,
 	})
+	defer helpers.CloseBody(resp)
 	if err != nil {
 		return managed.ExternalObservation{ResourceExists: false}, errors.Wrap(err, errShowQualityGateCondition)
 	}
@@ -204,7 +206,8 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 
 	qualityGateConditionCreateOptions := instance.GenerateCreateQualityGateConditionOption(cr.Spec.ForProvider)
 
-	qualityGateCondition, _, err := c.qualityGatesClient.CreateCondition(&qualityGateConditionCreateOptions)
+	qualityGateCondition, createResp, err := c.qualityGatesClient.CreateCondition(&qualityGateConditionCreateOptions) //nolint:bodyclose // closed via helpers.CloseBody
+	defer helpers.CloseBody(createResp)
 	if err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, errCreateQualityGateCondition)
 	}
@@ -229,7 +232,8 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 
 	qualityGateConditionUpdateOptions := instance.GenerateUpdateQualityGateConditionOption(externalName, cr.Spec.ForProvider)
 
-	_, err := c.qualityGatesClient.UpdateCondition(&qualityGateConditionUpdateOptions)
+	updateResp, err := c.qualityGatesClient.UpdateCondition(&qualityGateConditionUpdateOptions) //nolint:bodyclose // closed via helpers.CloseBody
+	defer helpers.CloseBody(updateResp)
 	if err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateQualityGateCondition)
 	}
@@ -252,7 +256,8 @@ func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalDelete{}, nil
 	}
 
-	_, err := c.qualityGatesClient.DeleteCondition(instance.GenerateDeleteQualityGateConditionOption(externalName))
+	deleteResp, err := c.qualityGatesClient.DeleteCondition(instance.GenerateDeleteQualityGateConditionOption(externalName)) //nolint:bodyclose // closed via helpers.CloseBody
+	defer helpers.CloseBody(deleteResp)
 	if err != nil {
 		return managed.ExternalDelete{}, errors.Wrap(err, errDeleteQualityGateCondition)
 	}

@@ -1,0 +1,12 @@
+---
+apiVersion: instance.sonarqube.crossplane.io/v1alpha1
+kind: QualityGate
+metadata:
+  name: example-qualitygate
+  namespace: default
+spec:
+  forProvider:
+    name: TestQualityGate
+  providerConfigRef:
+    name: example
+    kind: ProviderConfig
