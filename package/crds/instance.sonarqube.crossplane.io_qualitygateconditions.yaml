@@ -72,7 +72,7 @@ spec:
                       Only accepts metrics of the following types: INT, MILLISEC, RATING, WORK_DUR, FLOAT, PERCENT, LEVEL.
                       The following metrics are forbidden: alert_status, security_hotspots, new_security_hotspots.
                     minLength: 1
-                    pattern: ^(?!alert_status$)(?!security_hotspots$)(?!new_security_hotspots$)[a-zA-Z0-9_]+$
+                    pattern: ^[a-zA-Z0-9_]+$
                     type: string
                   op:
                     description: |-

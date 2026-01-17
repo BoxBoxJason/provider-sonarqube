@@ -58,7 +58,7 @@ type QualityGateConditionParameters struct {
 	// Metric is the Condition metric that the condition applies to.
 	// Only accepts metrics of the following types: INT, MILLISEC, RATING, WORK_DUR, FLOAT, PERCENT, LEVEL.
 	// The following metrics are forbidden: alert_status, security_hotspots, new_security_hotspots.
-	// +kubebuilder:validation:Pattern=`^(?!alert_status$)(?!security_hotspots$)(?!new_security_hotspots$)[a-zA-Z0-9_]+$`
+	// +kubebuilder:validation:Pattern="^[a-zA-Z0-9_]+$"
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	Metric string `json:"metric,omitempty"`
