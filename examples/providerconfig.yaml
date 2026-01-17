@@ -18,6 +18,7 @@ metadata:
   name: example
   namespace: default
 spec:
+  baseURL: http://sonarqube.example.com/api
   credentials:
     source: Secret
     secretRef:
@@ -30,6 +31,7 @@ kind: ClusterProviderConfig
 metadata:
   name: example
 spec:
+  baseURL: http://sonarqube.example.com/api
   credentials:
     source: Secret
     secretRef:
