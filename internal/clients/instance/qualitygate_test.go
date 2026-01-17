@@ -324,7 +324,7 @@ func TestLateInitializeQualityGate(t *testing.T) {
 				{Id: ptr.To("condition-123"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
 			},
 		},
-		"ConditionWithIdNotOverwritten": {
+		"ConditionWithValidIdNotOverwritten": {
 			spec: &v1alpha1.QualityGateParameters{
 				Name: "test",
 				Conditions: []v1alpha1.QualityGateConditionParameters{
@@ -334,12 +334,30 @@ func TestLateInitializeQualityGate(t *testing.T) {
 			observation: &v1alpha1.QualityGateObservation{
 				IsDefault: false,
 				Conditions: []v1alpha1.QualityGateConditionObservation{
-					{ID: "different-id", Metric: "coverage", Error: "80", Op: "LT"},
+					{ID: "existing-id", Metric: "coverage", Error: "80", Op: "LT"}, // same ID in observation
 				},
 			},
 			wantDefault: ptr.To(false),
 			wantConditions: []v1alpha1.QualityGateConditionParameters{
 				{Id: ptr.To("existing-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+			},
+		},
+		"ConditionWithStaleIdGetsUpdated": {
+			spec: &v1alpha1.QualityGateParameters{
+				Name: "test",
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Id: ptr.To("stale-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+				},
+			},
+			observation: &v1alpha1.QualityGateObservation{
+				IsDefault: false,
+				Conditions: []v1alpha1.QualityGateConditionObservation{
+					{ID: "new-id", Metric: "coverage", Error: "80", Op: "LT"}, // different ID in observation
+				},
+			},
+			wantDefault: ptr.To(false),
+			wantConditions: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("new-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
 			},
 		},
 		"MultipleConditionsMatchedCorrectly": {
@@ -348,7 +366,7 @@ func TestLateInitializeQualityGate(t *testing.T) {
 				Conditions: []v1alpha1.QualityGateConditionParameters{
 					{Metric: "coverage", Error: "80", Op: ptr.To("LT")},
 					{Metric: "bugs", Error: "0", Op: ptr.To("GT")},
-					{Id: ptr.To("existing-id"), Metric: "duplicated_lines", Error: "3"},
+					{Id: ptr.To("dup-id"), Metric: "duplicated_lines", Error: "3"}, // valid ID
 				},
 			},
 			observation: &v1alpha1.QualityGateObservation{
@@ -363,7 +381,7 @@ func TestLateInitializeQualityGate(t *testing.T) {
 			wantConditions: []v1alpha1.QualityGateConditionParameters{
 				{Id: ptr.To("cov-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
 				{Id: ptr.To("bugs-id"), Metric: "bugs", Error: "0", Op: ptr.To("GT")},
-				{Id: ptr.To("existing-id"), Metric: "duplicated_lines", Error: "3"},
+				{Id: ptr.To("dup-id"), Metric: "duplicated_lines", Error: "3"}, // kept because valid
 			},
 		},
 		"NoMatchingConditionLeavesIdNil": {
@@ -382,6 +400,66 @@ func TestLateInitializeQualityGate(t *testing.T) {
 			wantDefault: ptr.To(false),
 			wantConditions: []v1alpha1.QualityGateConditionParameters{
 				{Id: nil, Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+			},
+		},
+		"StaleIdGetsUpdated": {
+			spec: &v1alpha1.QualityGateParameters{
+				Name: "test",
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Id: ptr.To("old-stale-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+				},
+			},
+			observation: &v1alpha1.QualityGateObservation{
+				IsDefault: false,
+				Conditions: []v1alpha1.QualityGateConditionObservation{
+					{ID: "new-id-456", Metric: "coverage", Error: "80", Op: "LT"},
+				},
+			},
+			wantDefault: ptr.To(false),
+			wantConditions: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("new-id-456"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+			},
+		},
+		"MultipleConditionsOneWithStaleId": {
+			spec: &v1alpha1.QualityGateParameters{
+				Name: "test",
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Id: ptr.To("valid-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+					{Id: ptr.To("stale-id"), Metric: "bugs", Error: "0", Op: ptr.To("GT")},
+					{Metric: "duplicated_lines", Error: "3"},
+				},
+			},
+			observation: &v1alpha1.QualityGateObservation{
+				IsDefault: false,
+				Conditions: []v1alpha1.QualityGateConditionObservation{
+					{ID: "valid-id", Metric: "coverage", Error: "80", Op: "LT"},
+					{ID: "new-bugs-id", Metric: "bugs", Error: "0", Op: "GT"},
+					{ID: "dup-id", Metric: "duplicated_lines", Error: "3", Op: ""},
+				},
+			},
+			wantDefault: ptr.To(false),
+			wantConditions: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("valid-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+				{Id: ptr.To("new-bugs-id"), Metric: "bugs", Error: "0", Op: ptr.To("GT")},
+				{Id: ptr.To("dup-id"), Metric: "duplicated_lines", Error: "3"},
+			},
+		},
+		"StaleIdWithNoMatchingConditionBecomesNil": {
+			spec: &v1alpha1.QualityGateParameters{
+				Name: "test",
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Id: ptr.To("stale-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
+				},
+			},
+			observation: &v1alpha1.QualityGateObservation{
+				IsDefault: false,
+				Conditions: []v1alpha1.QualityGateConditionObservation{
+					{ID: "other-id", Metric: "bugs", Error: "0", Op: "GT"},
+				},
+			},
+			wantDefault: ptr.To(false),
+			wantConditions: []v1alpha1.QualityGateConditionParameters{
+				{Id: ptr.To("stale-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")},
 			},
 		},
 	}

@@ -105,6 +105,29 @@ func IsQualityGateUpToDate(spec *v1alpha1.QualityGateParameters, observation *v1
 
 // LateInitializeQualityGate fills the spec with the observed state if the spec fields are nil
 // It also late-initializes condition IDs by matching conditions by their metric, error, and op fields
+// If a condition has a stale ID (doesn't exist in observations), it will be updated to the correct ID
+// buildObservationIdSet creates a map of all observation condition IDs for quick lookup
+func buildObservationIdSet(conditions []v1alpha1.QualityGateConditionObservation) map[string]bool {
+	idSet := make(map[string]bool)
+	for i := range conditions {
+		idSet[conditions[i].ID] = true
+	}
+	return idSet
+}
+
+// findMatchingObservationId searches for an observation condition that matches the spec condition
+// by metric, error, and op, and returns its ID
+func findMatchingObservationId(specCondition v1alpha1.QualityGateConditionParameters, observations []v1alpha1.QualityGateConditionObservation) *string {
+	for i := range observations {
+		if specCondition.Metric == observations[i].Metric &&
+			specCondition.Error == observations[i].Error &&
+			helpers.IsComparablePtrEqualComparable(specCondition.Op, observations[i].Op) {
+			return &observations[i].ID
+		}
+	}
+	return nil
+}
+
 func LateInitializeQualityGate(spec *v1alpha1.QualityGateParameters, observation *v1alpha1.QualityGateObservation) {
 	if spec == nil || observation == nil {
 		return
@@ -112,22 +135,22 @@ func LateInitializeQualityGate(spec *v1alpha1.QualityGateParameters, observation
 
 	helpers.AssignIfNil(&spec.Default, observation.IsDefault)
 
-	// Late-initialize condition IDs by matching on metric, error, and op
+	// Build a map of observation IDs for quick lookup
+	observationIdSet := buildObservationIdSet(observation.Conditions)
+
+	// Late-initialize or update condition IDs by matching on metric, error, and op
 	for i := range spec.Conditions {
-		if spec.Conditions[i].Id != nil {
-			// Already has an ID, skip
+		// Check if the spec has an ID that still exists in observations
+		hasValidId := spec.Conditions[i].Id != nil && observationIdSet[*spec.Conditions[i].Id]
+
+		if hasValidId {
+			// Already has a valid ID that exists in observations, skip
 			continue
 		}
 
-		// Find matching observation by metric, error, and op
-		for j := range observation.Conditions {
-			if spec.Conditions[i].Metric == observation.Conditions[j].Metric &&
-				spec.Conditions[i].Error == observation.Conditions[j].Error &&
-				helpers.IsComparablePtrEqualComparable(spec.Conditions[i].Op, observation.Conditions[j].Op) {
-				// Found a match, late-initialize the ID
-				spec.Conditions[i].Id = &observation.Conditions[j].ID
-				break
-			}
+		// Either no ID or stale ID - find matching observation by metric, error, and op
+		if matchingId := findMatchingObservationId(spec.Conditions[i], observation.Conditions); matchingId != nil {
+			spec.Conditions[i].Id = matchingId
 		}
 	}
 }

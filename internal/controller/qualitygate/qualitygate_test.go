@@ -837,6 +837,63 @@ func TestObserveWithExistingConditionIds(t *testing.T) {
 	}
 }
 
+func TestObserveWithStaleConditionId(t *testing.T) {
+	client := &fake.MockQualityGatesClient{
+		ShowFn: func(opt *sonargo.QualitygatesShowOption) (*sonargo.QualitygatesShowObject, *http.Response, error) {
+			return &sonargo.QualitygatesShowObject{
+				Name:       "test-gate",
+				CaycStatus: "compliant",
+				IsBuiltIn:  false,
+				IsDefault:  false,
+				Conditions: []sonargo.QualitygatesShowObject_sub2{
+					{ID: "new-id-789", Metric: "coverage", Error: "80", Op: "LT"}, // new ID
+				},
+				Actions: sonargo.QualitygatesShowObject_sub1{},
+			}, nil, nil
+		},
+	}
+
+	qg := &v1alpha1.QualityGate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "test-gate",
+			Annotations: map[string]string{},
+		},
+		Spec: v1alpha1.QualityGateSpec{
+			ForProvider: v1alpha1.QualityGateParameters{
+				Name:    "test-gate",
+				Default: ptr.To(false),
+				Conditions: []v1alpha1.QualityGateConditionParameters{
+					{Id: ptr.To("old-stale-id"), Metric: "coverage", Error: "80", Op: ptr.To("LT")}, // stale ID
+				},
+			},
+		},
+	}
+	meta.SetExternalName(qg, "test-gate")
+
+	e := &external{qualityGatesClient: client}
+	obs, err := e.Observe(context.Background(), qg)
+	if err != nil {
+		t.Fatalf("Observe() error = %v", err)
+	}
+
+	// Verify ResourceLateInitialized is true because the stale ID was updated
+	if !obs.ResourceLateInitialized {
+		t.Errorf("Expected ResourceLateInitialized = true, got false")
+	}
+
+	// Verify condition ID was updated to the new ID
+	if qg.Spec.ForProvider.Conditions[0].Id == nil {
+		t.Errorf("Expected condition to have ID, but it was nil")
+	} else if *qg.Spec.ForProvider.Conditions[0].Id != "new-id-789" {
+		t.Errorf("Expected condition ID to be updated to 'new-id-789', got '%s'", *qg.Spec.ForProvider.Conditions[0].Id)
+	}
+
+	// Verify resource is up to date after fixing the stale ID
+	if !obs.ResourceUpToDate {
+		t.Errorf("Expected ResourceUpToDate = true after stale ID update, got false")
+	}
+}
+
 func TestUpdateWithConditions(t *testing.T) {
 	type args struct {
 		ctx context.Context
