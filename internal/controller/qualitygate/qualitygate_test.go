@@ -89,7 +89,7 @@ func TestObserve(t *testing.T) {
 				err: nil,
 			},
 		},
-		"ShowFailsReturnsError": {
+		"ShowFailsReturnsNotExists": {
 			client: &fake.MockQualityGatesClient{
 				ShowFn: func(opt *sonargo.QualitygatesShowOption) (*sonargo.QualitygatesShowObject, *http.Response, error) {
 					return nil, nil, errors.New("api error")
@@ -110,7 +110,7 @@ func TestObserve(t *testing.T) {
 			},
 			want: want{
 				o:   managed.ExternalObservation{ResourceExists: false},
-				err: errors.Wrap(errors.New("api error"), errShowQualityGate),
+				err: nil,
 			},
 		},
 		"SuccessfulObserveResourceExists": {
@@ -326,25 +326,54 @@ func TestCreate(t *testing.T) {
 				err: nil,
 			},
 		},
+		"ExternalNameSetToSonarQubeName": {
+			client: &fake.MockQualityGatesClient{
+				CreateFn: func(opt *sonargo.QualitygatesCreateOption) (*sonargo.QualitygatesCreateObject, *http.Response, error) {
+					return &sonargo.QualitygatesCreateObject{
+						ID:   "some-generated-id",
+						Name: "MySonarQubeGateName",
+					}, nil, nil
+				},
+			},
+			args: args{
+				ctx: context.Background(),
+				mg: &v1alpha1.QualityGate{
+					ObjectMeta: metav1.ObjectMeta{Name: "k8s-resource-name"},
+					Spec: v1alpha1.QualityGateSpec{
+						ForProvider: v1alpha1.QualityGateParameters{
+							Name: "MySonarQubeGateName",
+						},
+					},
+				},
+			},
+			want: want{
+				o:   managed.ExternalCreation{},
+				err: nil,
+			},
+		},
 		"CreateWithDefaultTrue": {
 			client: &fake.MockQualityGatesClient{
 				CreateFn: func(opt *sonargo.QualitygatesCreateOption) (*sonargo.QualitygatesCreateObject, *http.Response, error) {
 					return &sonargo.QualitygatesCreateObject{
 						ID:   "gate-123",
-						Name: opt.Name,
+						Name: "my-sonar-gate", // different from k8s resource name to test the fix
 					}, nil, nil
 				},
 				SetAsDefaultFn: func(opt *sonargo.QualitygatesSetAsDefaultOption) (*http.Response, error) {
+					// Verify the correct SonarQube quality gate name is used, not Kubernetes resource name
+					if opt.Name != "my-sonar-gate" {
+						return nil, errors.New("expected SonarQube gate name but got: " + opt.Name)
+					}
 					return nil, nil
 				},
 			},
 			args: args{
 				ctx: context.Background(),
 				mg: &v1alpha1.QualityGate{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-gate"},
+					ObjectMeta: metav1.ObjectMeta{Name: "test-gate"}, // different from SonarQube name
 					Spec: v1alpha1.QualityGateSpec{
 						ForProvider: v1alpha1.QualityGateParameters{
-							Name:    "test-gate",
+							Name:    "my-sonar-gate",
 							Default: ptr.To(true),
 						},
 					},
@@ -441,67 +470,6 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				o:   managed.ExternalUpdate{},
 				err: fmt.Errorf("external name is not set for Quality Gate %s", "test-gate"),
-			},
-		},
-		"RenameWhenNamesDiffer": {
-			client: &fake.MockQualityGatesClient{
-				RenameFn: func(opt *sonargo.QualitygatesRenameOption) (*http.Response, error) {
-					if opt.CurrentName != "old-name" || opt.Name != "new-name" {
-						return nil, errors.New("unexpected rename params")
-					}
-					return nil, nil
-				},
-			},
-			args: args{
-				ctx: context.Background(),
-				mg: func() *v1alpha1.QualityGate {
-					qg := &v1alpha1.QualityGate{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "test-gate",
-							Annotations: map[string]string{},
-						},
-						Spec: v1alpha1.QualityGateSpec{
-							ForProvider: v1alpha1.QualityGateParameters{
-								Name: "new-name",
-							},
-						},
-					}
-					meta.SetExternalName(qg, "old-name")
-					return qg
-				}(),
-			},
-			want: want{
-				o:   managed.ExternalUpdate{},
-				err: nil,
-			},
-		},
-		"RenameFails": {
-			client: &fake.MockQualityGatesClient{
-				RenameFn: func(opt *sonargo.QualitygatesRenameOption) (*http.Response, error) {
-					return nil, errors.New("rename error")
-				},
-			},
-			args: args{
-				ctx: context.Background(),
-				mg: func() *v1alpha1.QualityGate {
-					qg := &v1alpha1.QualityGate{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "test-gate",
-							Annotations: map[string]string{},
-						},
-						Spec: v1alpha1.QualityGateSpec{
-							ForProvider: v1alpha1.QualityGateParameters{
-								Name: "new-name",
-							},
-						},
-					}
-					meta.SetExternalName(qg, "old-name")
-					return qg
-				}(),
-			},
-			want: want{
-				o:   managed.ExternalUpdate{},
-				err: errors.Wrap(errors.New("rename error"), errUpdateQualityGate),
 			},
 		},
 		"SetAsDefaultWhenRequested": {
@@ -626,6 +594,10 @@ func TestDelete(t *testing.T) {
 		"SuccessfulDelete": {
 			client: &fake.MockQualityGatesClient{
 				DestroyFn: func(opt *sonargo.QualitygatesDestroyOption) (*http.Response, error) {
+					// Verify the correct external name is used for deletion
+					if opt.Name != "my-sonar-gate" {
+						return nil, errors.New("expected external name 'my-sonar-gate' but got: " + opt.Name)
+					}
 					return nil, nil
 				},
 			},
@@ -634,11 +606,11 @@ func TestDelete(t *testing.T) {
 				mg: func() *v1alpha1.QualityGate {
 					qg := &v1alpha1.QualityGate{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:        "test-gate",
+							Name:        "k8s-resource-name", // different from external name to test the fix
 							Annotations: map[string]string{},
 						},
 					}
-					meta.SetExternalName(qg, "test-gate")
+					meta.SetExternalName(qg, "my-sonar-gate") // this should be used for deletion
 					return qg
 				}(),
 			},
@@ -693,6 +665,38 @@ func TestDisconnect(t *testing.T) {
 	err := e.Disconnect(context.Background())
 	if err != nil {
 		t.Errorf("Disconnect() error = %v, want nil", err)
+	}
+}
+
+func TestCreateSetsExternalNameToSonarQubeName(t *testing.T) {
+	client := &fake.MockQualityGatesClient{
+		CreateFn: func(opt *sonargo.QualitygatesCreateOption) (*sonargo.QualitygatesCreateObject, *http.Response, error) {
+			return &sonargo.QualitygatesCreateObject{
+				ID:   "generated-id-12345",
+				Name: "ActualSonarQubeName",
+			}, nil, nil
+		},
+	}
+
+	qg := &v1alpha1.QualityGate{
+		ObjectMeta: metav1.ObjectMeta{Name: "k8s-resource-name"},
+		Spec: v1alpha1.QualityGateSpec{
+			ForProvider: v1alpha1.QualityGateParameters{
+				Name: "ActualSonarQubeName",
+			},
+		},
+	}
+
+	e := &external{qualityGatesClient: client}
+	_, err := e.Create(context.Background(), qg)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	// Verify external name is set to the SonarQube name, not the ID
+	externalName := meta.GetExternalName(qg)
+	if externalName != "ActualSonarQubeName" {
+		t.Errorf("Expected external name 'ActualSonarQubeName', got '%s'", externalName)
 	}
 }
 

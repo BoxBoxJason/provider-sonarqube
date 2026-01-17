@@ -29,6 +29,8 @@ import (
 // QualityGateParameters represent the desired state of a QualityGate.
 type QualityGateParameters struct {
 	// Name is the Display name of the Quality Gate.
+	// WARNING: This field is immutable once set.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Name is immutable."
 	// +kubebuilder:validation:MaxLength=100
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Required

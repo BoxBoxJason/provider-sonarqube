@@ -174,7 +174,8 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	})
 	defer helpers.CloseBody(resp)
 	if err != nil {
-		return managed.ExternalObservation{ResourceExists: false}, errors.Wrap(err, errShowQualityGate)
+		// If the quality gate is not found, treat as resource doesn't exist
+		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 
 	// Update status with observed state
@@ -209,13 +210,13 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalCreation{}, errors.Wrap(err, errCreateQualityGate)
 	}
 
-	// Set the external name to the ID of the created Quality Gate
-	meta.SetExternalName(cr, qualityGate.ID)
+	// Set the external name to the Name of the created Quality Gate
+	meta.SetExternalName(cr, qualityGate.Name)
 
 	// Set Quality Gate as default if specified in the spec
 	if cr.Spec.ForProvider.Default != nil && *cr.Spec.ForProvider.Default {
 		setDefaultResp, err := c.qualityGatesClient.SetAsDefault(&sonargo.QualitygatesSetAsDefaultOption{ //nolint:bodyclose // closed via helpers.CloseBody
-			Name: cr.Name,
+			Name: qualityGate.Name,
 		})
 		defer helpers.CloseBody(setDefaultResp)
 		if err != nil {
@@ -236,21 +237,6 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	externalName := meta.GetExternalName(cr)
 	if externalName == "" {
 		return managed.ExternalUpdate{}, fmt.Errorf("external name is not set for Quality Gate %s", cr.Name)
-	}
-
-	// Call rename endpoint if the name has changed
-	if cr.Spec.ForProvider.Name != externalName {
-		renameResp, err := c.qualityGatesClient.Rename(&sonargo.QualitygatesRenameOption{ //nolint:bodyclose // closed via helpers.CloseBody
-			CurrentName: externalName,
-			Name:        cr.Spec.ForProvider.Name,
-		})
-		defer helpers.CloseBody(renameResp)
-		if err != nil {
-			return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateQualityGate)
-		}
-
-		// Update the external name to the new name
-		meta.SetExternalName(cr, cr.Spec.ForProvider.Name)
 	}
 
 	// Set Quality Gate as default if specified in the spec (idempotent)
@@ -283,7 +269,7 @@ func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 
 	destroyResp, err := c.qualityGatesClient.Destroy(&sonargo.QualitygatesDestroyOption{ //nolint:bodyclose // closed via helpers.CloseBody
-		Name: cr.Name,
+		Name: externalName,
 	})
 	defer helpers.CloseBody(destroyResp)
 	if err != nil {

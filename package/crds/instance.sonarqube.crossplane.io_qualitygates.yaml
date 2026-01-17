@@ -66,10 +66,15 @@ spec:
                       WARNING: It is currently not possible to unset the default Quality Gate in SonarQube once it is set. The only way to change the default Quality Gate is to set another Quality Gate as default.
                     type: boolean
                   name:
-                    description: Name is the Display name of the Quality Gate.
+                    description: |-
+                      Name is the Display name of the Quality Gate.
+                      WARNING: This field is immutable once set.
                     maxLength: 100
                     minLength: 1
                     type: string
+                    x-kubernetes-validations:
+                    - message: Name is immutable.
+                      rule: self == oldSelf
                 required:
                 - name
                 type: object
