@@ -119,9 +119,6 @@ func IsQualityGateUpToDate(spec *v1alpha1.QualityGateParameters, observation *v1
 	return true
 }
 
-// LateInitializeQualityGate fills the spec with the observed state if the spec fields are nil
-// It also late-initializes condition IDs by matching conditions by their metric, error, and op fields
-// If a condition has a stale ID (doesn't exist in observations), it will be updated to the correct ID
 // buildObservationIdSet creates a map of all observation condition IDs for quick lookup
 func buildObservationIdSet(conditions []v1alpha1.QualityGateConditionObservation) map[string]bool {
 	idSet := make(map[string]bool)
@@ -144,6 +141,9 @@ func findMatchingObservationId(specCondition v1alpha1.QualityGateConditionParame
 	return nil
 }
 
+// LateInitializeQualityGate fills the spec with the observed state if the spec fields are nil
+// It also late-initializes condition IDs by matching conditions by their metric, error, and op fields
+// If a condition has a stale ID (doesn't exist in observations), it will be updated to the correct ID
 func LateInitializeQualityGate(spec *v1alpha1.QualityGateParameters, observation *v1alpha1.QualityGateObservation) {
 	if spec == nil || observation == nil {
 		return
