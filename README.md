@@ -48,7 +48,6 @@ kubectl apply -f examples/providerconfig.yaml
 
 1. Clone the repository using: `git clone https://github.com/crossplane-contrib/provider-sonarqube.git`
 2. Run `make submodules` to initialize the "build" Make submodule we use for CI/CD.
-3. Rename the provider by running the following command:
 
 ### Adding a new type
 
