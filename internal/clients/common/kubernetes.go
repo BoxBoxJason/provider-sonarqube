@@ -18,7 +18,6 @@ package common
 
 import (
 	"context"
-	"strings"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/errors"
@@ -53,9 +52,7 @@ func GetTokenValueFromSecret(ctx context.Context, client client.Client, m resour
 		return nil, errors.Errorf(ErrSecretKeyNotFound)
 	}
 
-	// Trim whitespace (including newlines) from the token value
-	// This is important because kubectl create secret can add trailing newlines
-	data := strings.TrimSpace(string(value))
+	data := string(value)
 	return &data, nil
 }
 

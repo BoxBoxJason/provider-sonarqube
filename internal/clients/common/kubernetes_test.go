@@ -137,30 +137,6 @@ func TestGetTokenValueFromSecret(t *testing.T) {
 			want:    strPtr("my-token-value"),
 			wantErr: false,
 		},
-		"TokenWithWhitespaceIsTrimmed": {
-			args: args{
-				ctx: context.Background(),
-				client: newFakeClient(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-secret",
-						Namespace: "default",
-					},
-					Data: map[string][]byte{
-						"token": []byte("  my-token-value  \n"),
-					},
-				}),
-				m: &fake.Managed{},
-				selector: &xpv1.SecretKeySelector{
-					SecretReference: xpv1.SecretReference{
-						Name:      "my-secret",
-						Namespace: "default",
-					},
-					Key: "token",
-				},
-			},
-			want:    strPtr("my-token-value"),
-			wantErr: false,
-		},
 	}
 
 	for name, tc := range tests {
