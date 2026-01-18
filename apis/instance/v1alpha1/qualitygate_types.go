@@ -47,11 +47,11 @@ type QualityGateParameters struct {
 // QualityGateObservation are the observable fields of a QualityGate.
 type QualityGateObservation struct {
 	// Actions represents the actions that can be performed on the Quality Gate.
-	Actions QualityGatesActions `json:"actions"`
+	Actions QualityGatesActions `json:"actions,omitempty"`
 	// Defines the Clean as You Code status of the Quality Gate.
 	CaycStatus string `json:"caycStatus"`
 	// Conditions represents the list of conditions associated with the Quality Gate.
-	Conditions []QualityGateConditionObservation `json:"conditions"`
+	Conditions []QualityGateConditionObservation `json:"conditions,omitempty"`
 	// IsAiCodeSupported indicates whether AI Code Assurance is supported for the Quality Gate.
 	IsAiCodeSupported bool `json:"isAiCodeSupported"`
 	// IsBuiltIn indicates whether the Quality Gate is built-in.

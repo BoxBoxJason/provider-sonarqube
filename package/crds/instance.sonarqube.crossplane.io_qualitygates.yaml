@@ -269,9 +269,7 @@ spec:
                     description: Name represents the name of the Quality Gate.
                     type: string
                 required:
-                - actions
                 - caycStatus
-                - conditions
                 - isAiCodeSupported
                 - isBuiltIn
                 - isDefault
