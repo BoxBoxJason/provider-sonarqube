@@ -22,7 +22,7 @@ Create a [User Token](https://docs.sonarsource.com/sonarqube-server/user-guide/m
 kubectl create secret generic example-provider-secret -n default --from-literal=credentials="<USER_TOKEN>"
 ```
 
-Configure a `ProviderConfig` with a baseURL pointing to your SonarQube instance:
+Configure a `ProviderConfig` with a baseURL pointing to your SonarQube instance (you can use either token-based authentication or basic auth):
 
 ```yaml
 apiVersion: sonarqube.crossplane.io/v1alpha1
@@ -32,12 +32,12 @@ metadata:
   namespace: default
 spec:
   baseURL: http://sonarqube.example.com/api
-  credentials:
+  token:
     source: Secret
     secretRef:
       namespace: default
       name: example-provider-secret
-      key: credentials
+      key: token
 ```
 
 ```bash

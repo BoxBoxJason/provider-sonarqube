@@ -28,9 +28,17 @@ type ProviderConfigSpec struct {
 	// InsecureSkipVerify indicates whether to skip TLS certificate verification.
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 
-	// Credentials required to authenticate to this provider.
-	// +kubebuilder:validation:Required
-	Credentials ProviderCredentials `json:"credentials"`
+	// Token is the User Token required to authenticate with the SonarQube instance.
+	// WARNING: This MUST NOT be an Analysis token / project token, it MUST be a User token with appropriate permissions.
+	// +kubebuilder:validation:Optional
+	Token *ProviderCredentials `json:"token,omitempty"`
+
+	// Username is the username for Basic Authentication to the SonarQube instance.
+	// +kubebuilder:validation:Optional
+	Username *ProviderCredentials `json:"username,omitempty"`
+	// Password is the password for Basic Authentication to the SonarQube instance.
+	// +kubebuilder:validation:Optional
+	Password *ProviderCredentials `json:"password,omitempty"`
 }
 
 // +kubebuilder:object:root=true

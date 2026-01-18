@@ -39,6 +39,10 @@ type BasicAuthArgs struct {
 
 // Config provides SonarQube configurations for the SonarQube client
 type Config struct {
+	// AuthType is the SonarQube authentication type to use (e.g., BasicAuth, PersonalAccessToken)
+	AuthType AuthType
+	// BasicAuth contains the Basic authentication credentials for the SonarQube instance
+	BasicAuth *BasicAuthArgs
 	// Token is the Personal access token for the SonarQube instance
 	Token string
 	// BaseURL is the URL of the SonarQube instance (trailing slash is optional)
@@ -49,10 +53,28 @@ type Config struct {
 
 // NewClient creates new SonarQube Client with provided SonarQube Configurations/Credentials.
 func NewClient(clientConfig Config) *sonargo.Client {
-	// Create SonarQube client
-	client, err := sonargo.NewClientWithToken(clientConfig.BaseURL, clientConfig.Token)
-	if err != nil {
-		panic(err)
+	var client *sonargo.Client
+
+	switch clientConfig.AuthType {
+	case BasicAuth:
+		if clientConfig.BasicAuth == nil {
+			panic(errors.New("BasicAuth configuration is required for BasicAuth"))
+		}
+		// Create SonarQube client with Basic Auth
+		sonarClient, err := sonargo.NewClient(clientConfig.BaseURL, clientConfig.BasicAuth.Username, clientConfig.BasicAuth.Password)
+		if err != nil {
+			panic(err)
+		}
+		client = sonarClient
+	case PersonalAccessToken:
+		// Create SonarQube client with Personal Access Token
+		sonarClient, err := sonargo.NewClientWithToken(clientConfig.BaseURL, clientConfig.Token)
+		if err != nil {
+			panic(err)
+		}
+		client = sonarClient
+	default:
+		panic(errors.New("unsupported authentication type"))
 	}
 
 	httpClient := cleanhttp.DefaultClient()
@@ -117,27 +139,77 @@ func buildConfigFromSpec(ctx context.Context, kubeClient client.Client, managedR
 		return nil, errors.Wrap(err, "cannot track ProviderConfig usage")
 	}
 
-	switch s := spec.Credentials.Source; s {
-	case xpv1.CredentialsSourceSecret:
-		if spec.Credentials.SecretRef == nil {
-			return nil, errors.New("no credentials secret referenced")
-		}
-
-		token, err := GetTokenValueFromSecret(ctx, kubeClient, managedResource, spec.Credentials.SecretRef)
-		if err != nil {
-			return nil, err
-		}
-
-		if token == nil || *token == "" {
-			return nil, errors.New("credentials secret key is empty")
-		}
-
-		return &Config{
-			BaseURL:            spec.BaseURL,
-			Token:              *token,
-			InsecureSkipVerify: ptr.Deref(spec.InsecureSkipVerify, false),
-		}, nil
-	default:
-		return nil, errors.Errorf("credentials source %s is not currently supported", s)
+	config := &Config{
+		BaseURL:            spec.BaseURL,
+		InsecureSkipVerify: ptr.Deref(spec.InsecureSkipVerify, false),
 	}
+
+	authType, err := determineAuthType(spec)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot determine authentication type from ProviderConfigSpec")
+	}
+	config.AuthType = authType
+
+	switch authType {
+	case PersonalAccessToken:
+		token, err := GetTokenValueFromSecret(ctx, kubeClient, managedResource, spec.Token.SecretRef)
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get token from secret")
+		}
+		config.Token = *token
+	case BasicAuth:
+		username, err := GetTokenValueFromSecret(ctx, kubeClient, managedResource, spec.Username.SecretRef)
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get username from secret")
+		}
+		password, err := GetTokenValueFromSecret(ctx, kubeClient, managedResource, spec.Password.SecretRef)
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get password from secret")
+		}
+		config.BasicAuth = &BasicAuthArgs{
+			Username: *username,
+			Password: *password,
+		}
+	}
+
+	return config, nil
+}
+
+// determineAuthType determines the AuthType based on the provided ProviderConfigSpec
+// It populates the AuthType and BasicAuth fields in the Config struct accordingly
+// It returns an error if no valid authentication method is found
+func determineAuthType(spec v1alpha1.ProviderConfigSpec) (AuthType, error) {
+	// Check if Token is provided for Personal Access Token authentication
+	if spec.Token != nil {
+		switch spec.Token.Source {
+		case xpv1.CredentialsSourceSecret:
+			if spec.Token.SecretRef == nil {
+				return "", errors.New("secretRef must be provided for token")
+			}
+			return PersonalAccessToken, nil
+		default:
+			return "", errors.Errorf("credentials source %s for token is not currently supported", spec.Token.Source)
+		}
+	} else if spec.Username != nil && spec.Password != nil {
+		// Check if Username and Password are provided for Basic Authentication
+		switch spec.Username.Source {
+		case xpv1.CredentialsSourceSecret:
+			if spec.Username.SecretRef == nil {
+				return "", errors.New("secretRef must be provided for username")
+			}
+			switch spec.Password.Source {
+			case xpv1.CredentialsSourceSecret:
+				if spec.Password.SecretRef == nil {
+					return "", errors.New("secretRef must be provided for password")
+				}
+				return BasicAuth, nil
+			default:
+				return "", errors.Errorf("credentials source %s for password is not currently supported", spec.Password.Source)
+			}
+		default:
+			return "", errors.Errorf("credentials source %s for username is not currently supported", spec.Username.Source)
+		}
+	}
+
+	return "", errors.New("no valid authentication method found in ProviderConfigSpec")
 }
