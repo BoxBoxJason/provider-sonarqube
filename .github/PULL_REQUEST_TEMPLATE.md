@@ -33,7 +33,7 @@ I have:
 
 - [ ] Successfully built and ran the provider locally against a kubernetes cluster.
 - [ ] Successfully created, updated, and deleted resources of the types I changed / created.
-- [ ] Ensured reconciliation loops for the types I changed / created complete without error.
+- [ ] Ensured reconciliation loops for the changed / created resource complete without error.
   - [ ] Creation
   - [ ] Update
   - [ ] Deletion
