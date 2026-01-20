@@ -31,6 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	STR_TRUE  = "true"
+	STR_FALSE = "false"
+)
+
 // BasicAuthArgs is the expected struct that can be passed in the Config.Token field to add support for BasicAuth AuthMethod
 type BasicAuthArgs struct {
 	Username string `json:"username"`
