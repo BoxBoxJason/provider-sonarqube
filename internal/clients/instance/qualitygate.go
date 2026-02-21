@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/boxboxjason/sonarqube-client-go/sonar"
+
 	"github.com/crossplane/provider-sonarqube/apis/instance/v1alpha1"
 	"github.com/crossplane/provider-sonarqube/internal/clients/common"
 	"github.com/crossplane/provider-sonarqube/internal/helpers"
@@ -192,4 +193,19 @@ func WereQualityGateConditionsLateInitialized(before, after []v1alpha1.QualityGa
 	}
 
 	return false
+}
+
+// GenerateQualityGateGetByProjectOptions generates the options for getting a SonarQube Quality Gate by project based on the provided project key.
+func GenerateQualityGateGetByProjectOptions(projectKey string) *sonar.QualitygatesGetByProjectOption {
+	return &sonar.QualitygatesGetByProjectOption{
+		Project: projectKey,
+	}
+}
+
+// GenerateQualityGateSelectOptions generates the options for selecting a SonarQube Quality Gate based on the provided quality gate name.
+func GenerateQualityGateSelectOptions(projectKey string, qualityGateName string) *sonar.QualitygatesSelectOption {
+	return &sonar.QualitygatesSelectOption{
+		ProjectKey: projectKey,
+		GateName:   qualityGateName,
+	}
 }
