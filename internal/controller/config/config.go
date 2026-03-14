@@ -81,6 +81,7 @@ func setupProviderConfig(
 
 	reconciler := providerconfig.NewReconciler(mgr, kinds,
 		providerconfig.WithLogger(opts.Logger.WithValues("controller", name)),
+		//nolint:staticcheck // GetEventRecorderFor is marked as deprecated but is not yet replaced with an alternative in controller-runtime, and the APIRecorder is still required for recording events.
 		providerconfig.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))))
 
 	return ctrl.NewControllerManagedBy(mgr).
