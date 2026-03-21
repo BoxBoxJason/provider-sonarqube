@@ -31,17 +31,17 @@ func TestGenerateProjectBranchesListOptions(t *testing.T) {
 
 	tests := map[string]struct {
 		projectKey string
-		want       *sonar.ProjectBranchesListOption
+		want       *sonar.ProjectBranchesListOptions
 	}{
 		"BasicListOption": {
 			projectKey: "my-project",
-			want: &sonar.ProjectBranchesListOption{
+			want: &sonar.ProjectBranchesListOptions{
 				Project: "my-project",
 			},
 		},
 		"EmptyProjectKey": {
 			projectKey: "",
-			want: &sonar.ProjectBranchesListOption{
+			want: &sonar.ProjectBranchesListOptions{
 				Project: "",
 			},
 		},
@@ -65,12 +65,12 @@ func TestGenerateProjectBranchesDeleteOptions(t *testing.T) {
 	tests := map[string]struct {
 		projectKey string
 		branchKey  string
-		want       *sonar.ProjectBranchesDeleteOption
+		want       *sonar.ProjectBranchesDeleteOptions
 	}{
 		"BasicDeleteOption": {
 			projectKey: "my-project",
 			branchKey:  "feature-branch",
-			want: &sonar.ProjectBranchesDeleteOption{
+			want: &sonar.ProjectBranchesDeleteOptions{
 				Project: "my-project",
 				Branch:  "feature-branch",
 			},
@@ -304,12 +304,12 @@ func TestGenerateProjectBranchesSetMainOptions(t *testing.T) {
 	tests := map[string]struct {
 		projectKey     string
 		mainBranchName string
-		want           *sonar.ProjectBranchesSetMainOption
+		want           *sonar.ProjectBranchesSetMainOptions
 	}{
 		"BasicSetMainOption": {
 			projectKey:     "my-project",
 			mainBranchName: "main",
-			want: &sonar.ProjectBranchesSetMainOption{
+			want: &sonar.ProjectBranchesSetMainOptions{
 				Project: "my-project",
 				Branch:  "main",
 			},

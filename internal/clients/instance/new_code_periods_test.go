@@ -32,24 +32,24 @@ func TestGenerateNewCodePeriodsShowOptions(t *testing.T) {
 	tests := map[string]struct {
 		projectKey *string
 		branch     *string
-		want       *sonar.NewCodePeriodsShowOption
+		want       *sonar.NewCodePeriodsShowOptions
 	}{
 		"BothNil": {
 			projectKey: nil,
 			branch:     nil,
-			want:       &sonar.NewCodePeriodsShowOption{},
+			want:       &sonar.NewCodePeriodsShowOptions{},
 		},
 		"ProjectKeyOnly": {
 			projectKey: ptr.To("my-project"),
 			branch:     nil,
-			want: &sonar.NewCodePeriodsShowOption{
+			want: &sonar.NewCodePeriodsShowOptions{
 				Project: "my-project",
 			},
 		},
 		"BothSet": {
 			projectKey: ptr.To("my-project"),
 			branch:     ptr.To("main"),
-			want: &sonar.NewCodePeriodsShowOption{
+			want: &sonar.NewCodePeriodsShowOptions{
 				Project: "my-project",
 				Branch:  "main",
 			},
@@ -57,7 +57,7 @@ func TestGenerateNewCodePeriodsShowOptions(t *testing.T) {
 		"BranchOnly": {
 			projectKey: nil,
 			branch:     ptr.To("develop"),
-			want: &sonar.NewCodePeriodsShowOption{
+			want: &sonar.NewCodePeriodsShowOptions{
 				Branch: "develop",
 			},
 		},
@@ -81,12 +81,12 @@ func TestGenerateProjectNewCodePeriodsSetOptions(t *testing.T) {
 	tests := map[string]struct {
 		projectKey string
 		params     *v1alpha1.ProjectNewCodePeriodParameters
-		want       *sonar.NewCodePeriodsSetOption
+		want       *sonar.NewCodePeriodsSetOptions
 	}{
 		"NilParams": {
 			projectKey: "my-project",
 			params:     nil,
-			want: &sonar.NewCodePeriodsSetOption{
+			want: &sonar.NewCodePeriodsSetOptions{
 				Project: "my-project",
 			},
 		},
@@ -95,7 +95,7 @@ func TestGenerateProjectNewCodePeriodsSetOptions(t *testing.T) {
 			params: &v1alpha1.ProjectNewCodePeriodParameters{
 				Type: "PREVIOUS_VERSION",
 			},
-			want: &sonar.NewCodePeriodsSetOption{
+			want: &sonar.NewCodePeriodsSetOptions{
 				Project: "my-project",
 				Type:    "PREVIOUS_VERSION",
 			},
@@ -106,7 +106,7 @@ func TestGenerateProjectNewCodePeriodsSetOptions(t *testing.T) {
 				Type:  "NUMBER_OF_DAYS",
 				Value: ptr.To("30"),
 			},
-			want: &sonar.NewCodePeriodsSetOption{
+			want: &sonar.NewCodePeriodsSetOptions{
 				Project: "my-project",
 				Type:    "NUMBER_OF_DAYS",
 				Value:   "30",
@@ -133,13 +133,13 @@ func TestGenerateBranchNewCodePeriodsSetOptions(t *testing.T) {
 		projectKey string
 		branchName string
 		params     *v1alpha1.ProjectNewCodePeriodParameters
-		want       *sonar.NewCodePeriodsSetOption
+		want       *sonar.NewCodePeriodsSetOptions
 	}{
 		"NilParams": {
 			projectKey: "my-project",
 			branchName: "main",
 			params:     nil,
-			want: &sonar.NewCodePeriodsSetOption{
+			want: &sonar.NewCodePeriodsSetOptions{
 				Project: "my-project",
 				Branch:  "main",
 			},
@@ -151,7 +151,7 @@ func TestGenerateBranchNewCodePeriodsSetOptions(t *testing.T) {
 				Type:  "REFERENCE_BRANCH",
 				Value: ptr.To("main"),
 			},
-			want: &sonar.NewCodePeriodsSetOption{
+			want: &sonar.NewCodePeriodsSetOptions{
 				Project: "my-project",
 				Branch:  "develop",
 				Type:    "REFERENCE_BRANCH",
@@ -177,17 +177,17 @@ func TestGenerateProjectNewCodePeriodsListOptions(t *testing.T) {
 
 	tests := map[string]struct {
 		projectKey string
-		want       *sonar.NewCodePeriodsListOption
+		want       *sonar.NewCodePeriodsListOptions
 	}{
 		"BasicListOption": {
 			projectKey: "my-project",
-			want: &sonar.NewCodePeriodsListOption{
+			want: &sonar.NewCodePeriodsListOptions{
 				Project: "my-project",
 			},
 		},
 		"EmptyProjectKey": {
 			projectKey: "",
-			want: &sonar.NewCodePeriodsListOption{
+			want: &sonar.NewCodePeriodsListOptions{
 				Project: "",
 			},
 		},

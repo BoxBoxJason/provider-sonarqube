@@ -30,7 +30,7 @@ import (
 
 // mockRulesClient is a test-local mock implementation of the RulesClient interface.
 type mockRulesClient struct {
-	SearchFn func(opt *sonar.RulesSearchOption) (*sonar.RulesSearch, *http.Response, error)
+	SearchFn func(opt *sonar.RulesSearchOptions) (*sonar.RulesSearch, *http.Response, error)
 }
 
 var errMockNotImplemented = errors.New("not implemented")
@@ -39,23 +39,23 @@ func (m *mockRulesClient) App() (*sonar.RulesApp, *http.Response, error) {
 	return nil, nil, errMockNotImplemented
 }
 
-func (m *mockRulesClient) Create(_ *sonar.RulesCreateOption) (*sonar.RulesCreate, *http.Response, error) {
+func (m *mockRulesClient) Create(_ *sonar.RulesCreateOptions) (*sonar.RulesCreate, *http.Response, error) {
 	return nil, nil, errMockNotImplemented
 }
 
-func (m *mockRulesClient) Delete(_ *sonar.RulesDeleteOption) (*http.Response, error) {
+func (m *mockRulesClient) Delete(_ *sonar.RulesDeleteOptions) (*http.Response, error) {
 	return nil, errMockNotImplemented
 }
 
-func (m *mockRulesClient) List(_ *sonar.RulesListOption) (*string, *http.Response, error) {
+func (m *mockRulesClient) List(_ *sonar.RulesListOptions) (*string, *http.Response, error) {
 	return nil, nil, errMockNotImplemented
 }
 
-func (m *mockRulesClient) Repositories(_ *sonar.RulesRepositoriesOption) (*sonar.RulesRepositories, *http.Response, error) {
+func (m *mockRulesClient) Repositories(_ *sonar.RulesRepositoriesOptions) (*sonar.RulesRepositories, *http.Response, error) {
 	return nil, nil, errMockNotImplemented
 }
 
-func (m *mockRulesClient) Search(opt *sonar.RulesSearchOption) (*sonar.RulesSearch, *http.Response, error) {
+func (m *mockRulesClient) Search(opt *sonar.RulesSearchOptions) (*sonar.RulesSearch, *http.Response, error) {
 	if m.SearchFn != nil {
 		return m.SearchFn(opt)
 	}
@@ -63,15 +63,15 @@ func (m *mockRulesClient) Search(opt *sonar.RulesSearchOption) (*sonar.RulesSear
 	return nil, nil, errMockNotImplemented
 }
 
-func (m *mockRulesClient) Show(_ *sonar.RulesShowOption) (*sonar.RulesShow, *http.Response, error) {
+func (m *mockRulesClient) Show(_ *sonar.RulesShowOptions) (*sonar.RulesShow, *http.Response, error) {
 	return nil, nil, errMockNotImplemented
 }
 
-func (m *mockRulesClient) Tags(_ *sonar.RulesTagsOption) (*sonar.RulesTags, *http.Response, error) {
+func (m *mockRulesClient) Tags(_ *sonar.RulesTagsOptions) (*sonar.RulesTags, *http.Response, error) {
 	return nil, nil, errMockNotImplemented
 }
 
-func (m *mockRulesClient) Update(opt *sonar.RulesUpdateOption) (*sonar.RulesUpdate, *http.Response, error) {
+func (m *mockRulesClient) Update(opt *sonar.RulesUpdateOptions) (*sonar.RulesUpdate, *http.Response, error) {
 	return nil, nil, errMockNotImplemented
 }
 
@@ -464,23 +464,23 @@ func TestIsQualityProfileRuleUpToDate(t *testing.T) {
 			want:        true,
 		},
 		"NilObservationReturnsFalse": {
-			spec:        &v1alpha1.QualityProfileRuleParameters{Rule: "java:S1144"},
+			spec:        &v1alpha1.QualityProfileRuleParameters{Rule: ptr.To("java:S1144")},
 			observation: nil,
 			want:        false,
 		},
 		"DifferentRuleKeyReturnsFalse": {
-			spec:        &v1alpha1.QualityProfileRuleParameters{Rule: "java:S1144"},
+			spec:        &v1alpha1.QualityProfileRuleParameters{Rule: ptr.To("java:S1144")},
 			observation: &v1alpha1.QualityProfileRuleObservation{Key: "java:S1145"},
 			want:        false,
 		},
 		"MatchingRuleNoSeverityNoParams": {
-			spec:        &v1alpha1.QualityProfileRuleParameters{Rule: "java:S1144"},
+			spec:        &v1alpha1.QualityProfileRuleParameters{Rule: ptr.To("java:S1144")},
 			observation: &v1alpha1.QualityProfileRuleObservation{Key: "java:S1144"},
 			want:        true,
 		},
 		"MatchingRuleWithMatchingSeverity": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:     "java:S1144",
+				Rule:     ptr.To("java:S1144"),
 				Severity: ptr.To("MAJOR"),
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -491,7 +491,7 @@ func TestIsQualityProfileRuleUpToDate(t *testing.T) {
 		},
 		"DifferentSeverityReturnsFalse": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:     "java:S1144",
+				Rule:     ptr.To("java:S1144"),
 				Severity: ptr.To("MAJOR"),
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -502,7 +502,7 @@ func TestIsQualityProfileRuleUpToDate(t *testing.T) {
 		},
 		"MatchingParameters": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:       "java:S1144",
+				Rule:       ptr.To("java:S1144"),
 				Parameters: &map[string]string{"max": "10"},
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -513,7 +513,7 @@ func TestIsQualityProfileRuleUpToDate(t *testing.T) {
 		},
 		"DifferentParametersReturnsFalse": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:       "java:S1144",
+				Rule:       ptr.To("java:S1144"),
 				Parameters: &map[string]string{"max": "10"},
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -524,7 +524,7 @@ func TestIsQualityProfileRuleUpToDate(t *testing.T) {
 		},
 		"NilSpecParametersDoesNotCheck": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule: "java:S1144",
+				Rule: ptr.To("java:S1144"),
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
 				Key:        "java:S1144",
@@ -534,7 +534,7 @@ func TestIsQualityProfileRuleUpToDate(t *testing.T) {
 		},
 		"EmptySpecParametersMatchesEmptyObservation": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:       "java:S1144",
+				Rule:       ptr.To("java:S1144"),
 				Parameters: &map[string]string{},
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -545,7 +545,7 @@ func TestIsQualityProfileRuleUpToDate(t *testing.T) {
 		},
 		"AllFieldsMatching": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:       "java:S1144",
+				Rule:       ptr.To("java:S1144"),
 				Severity:   ptr.To("CRITICAL"),
 				Parameters: &map[string]string{"max": "15", "min": "5"},
 			},
@@ -581,7 +581,7 @@ func TestIsQualityProfileRuleUpToDatePrioritized(t *testing.T) {
 	}{
 		"PrioritizedMatchReturnsTrue": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:        "java:S1000",
+				Rule:        ptr.To("java:S1000"),
 				Prioritized: ptr.To(true),
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -592,7 +592,7 @@ func TestIsQualityProfileRuleUpToDatePrioritized(t *testing.T) {
 		},
 		"PrioritizedMismatchReturnsFalse": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:        "java:S1000",
+				Rule:        ptr.To("java:S1000"),
 				Prioritized: ptr.To(true),
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -603,7 +603,7 @@ func TestIsQualityProfileRuleUpToDatePrioritized(t *testing.T) {
 		},
 		"ImpactsMatchReturnsTrue": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:    "java:S1000",
+				Rule:    ptr.To("java:S1000"),
 				Impacts: &map[string]string{"SECURITY": "HIGH"},
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -614,7 +614,7 @@ func TestIsQualityProfileRuleUpToDatePrioritized(t *testing.T) {
 		},
 		"ImpactsMismatchReturnsFalse": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule:    "java:S1000",
+				Rule:    ptr.To("java:S1000"),
 				Impacts: &map[string]string{"SECURITY": "HIGH"},
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
@@ -625,7 +625,7 @@ func TestIsQualityProfileRuleUpToDatePrioritized(t *testing.T) {
 		},
 		"SpecImpactsNilObservationHasImpactsReturnsTrue": {
 			spec: &v1alpha1.QualityProfileRuleParameters{
-				Rule: "java:S1000",
+				Rule: ptr.To("java:S1000"),
 			},
 			observation: &v1alpha1.QualityProfileRuleObservation{
 				Key:     "java:S1000",
@@ -722,7 +722,7 @@ func TestFetchAllQualityProfileRules(t *testing.T) {
 	}{
 		"SinglePageFetchesAllRules": {
 			rulesClient: &mockRulesClient{
-				SearchFn: func(_ *sonar.RulesSearchOption) (*sonar.RulesSearch, *http.Response, error) {
+				SearchFn: func(_ *sonar.RulesSearchOptions) (*sonar.RulesSearch, *http.Response, error) {
 					return &sonar.RulesSearch{
 						Rules: []sonar.RuleDetails{
 							{Key: "java:S1000", Name: "Rule 1"},
@@ -746,7 +746,7 @@ func TestFetchAllQualityProfileRules(t *testing.T) {
 				callCount := 0
 
 				return &mockRulesClient{
-					SearchFn: func(_ *sonar.RulesSearchOption) (*sonar.RulesSearch, *http.Response, error) {
+					SearchFn: func(_ *sonar.RulesSearchOptions) (*sonar.RulesSearch, *http.Response, error) {
 						callCount++
 						if callCount == 1 {
 							return &sonar.RulesSearch{
@@ -777,7 +777,7 @@ func TestFetchAllQualityProfileRules(t *testing.T) {
 		},
 		"SearchErrorReturnsError": {
 			rulesClient: &mockRulesClient{
-				SearchFn: func(_ *sonar.RulesSearchOption) (*sonar.RulesSearch, *http.Response, error) {
+				SearchFn: func(_ *sonar.RulesSearchOptions) (*sonar.RulesSearch, *http.Response, error) {
 					return nil, nil, errSearch
 				},
 			},
@@ -787,7 +787,7 @@ func TestFetchAllQualityProfileRules(t *testing.T) {
 		},
 		"EmptyRulesReturnsEmpty": {
 			rulesClient: &mockRulesClient{
-				SearchFn: func(_ *sonar.RulesSearchOption) (*sonar.RulesSearch, *http.Response, error) {
+				SearchFn: func(_ *sonar.RulesSearchOptions) (*sonar.RulesSearch, *http.Response, error) {
 					return &sonar.RulesSearch{
 						Rules:  nil,
 						Paging: sonar.Paging{Total: 0},
@@ -944,6 +944,1749 @@ func TestGenerateQualityProfileRuleObservationWithActivatedSettings(t *testing.T
 			got := GenerateQualityProfileRuleObservation(tc.rule, tc.activatedSettings)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("GenerateQualityProfileRuleObservation() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleCreateOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		parameters   *v1alpha1.RuleParameters
+		wantKey      string
+		wantName     string
+		wantTpl      string
+		wantImpacts  map[string]string
+		wantSeverity string
+	}{
+		"NilParametersReturnsEmpty": {
+			parameters:   nil,
+			wantKey:      "",
+			wantName:     "",
+			wantTpl:      "",
+			wantImpacts:  nil,
+			wantSeverity: "",
+		},
+		"OnlySeverityProvided": {
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "my-rule",
+				Name:                "My Rule",
+				TemplateKey:         "java:template",
+				MarkdownDescription: "some description",
+				Severity:            ptr.To("MAJOR"),
+			},
+			wantKey:      "my-rule",
+			wantName:     "My Rule",
+			wantTpl:      "java:template",
+			wantImpacts:  nil,
+			wantSeverity: "MAJOR",
+		},
+		"OnlyImpactsProvided": {
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "my-rule2",
+				Name:                "My Rule 2",
+				TemplateKey:         "java:template2",
+				MarkdownDescription: "desc2",
+				Impacts:             &map[string]string{"SECURITY": "HIGH"},
+			},
+			wantKey:      "my-rule2",
+			wantName:     "My Rule 2",
+			wantTpl:      "java:template2",
+			wantImpacts:  map[string]string{"SECURITY": "HIGH"},
+			wantSeverity: "", // Severity should not be set when Impacts is provided
+		},
+		"BothImpactsAndSeverityProvidedImpactsPrecedence": {
+			// When both Impacts and Severity are provided, Impacts takes precedence
+			// and Severity is omitted to avoid API errors
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "my-rule3",
+				Name:                "My Rule 3",
+				TemplateKey:         "java:template3",
+				MarkdownDescription: "desc3",
+				Severity:            ptr.To("BLOCKER"),
+				Impacts:             &map[string]string{"RELIABILITY": "MEDIUM"},
+			},
+			wantKey:      "my-rule3",
+			wantName:     "My Rule 3",
+			wantTpl:      "java:template3",
+			wantImpacts:  map[string]string{"RELIABILITY": "MEDIUM"},
+			wantSeverity: "", // Severity should be empty when Impacts is set
+		},
+		"EmptyImpactsMapFallsBackToSeverity": {
+			// Empty Impacts map should fall back to Severity
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "my-rule4",
+				Name:                "My Rule 4",
+				TemplateKey:         "java:template4",
+				MarkdownDescription: "desc4",
+				Severity:            ptr.To("MINOR"),
+				Impacts:             &map[string]string{},
+			},
+			wantKey:      "my-rule4",
+			wantName:     "My Rule 4",
+			wantTpl:      "java:template4",
+			wantImpacts:  nil,
+			wantSeverity: "MINOR",
+		},
+		"FullParametersWithOptionalFields": {
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "full-rule",
+				Name:                "Full Rule",
+				TemplateKey:         "java:full",
+				MarkdownDescription: "full desc",
+				CleanCodeAttribute:  ptr.To("CLEAR"),
+				Status:              ptr.To("READY"),
+				Type:                ptr.To("BUG"),
+				Impacts:             &map[string]string{"SECURITY": "HIGH", "MAINTAINABILITY": "LOW"},
+				Parameters: &map[string]v1alpha1.RuleParameterConfiguration{
+					"param1": {DefaultValue: "val1"},
+				},
+			},
+			wantKey:      "full-rule",
+			wantName:     "Full Rule",
+			wantTpl:      "java:full",
+			wantImpacts:  map[string]string{"SECURITY": "HIGH", "MAINTAINABILITY": "LOW"},
+			wantSeverity: "",
+		},
+		"NilOptionalFields": {
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "minimal-rule",
+				Name:                "Minimal",
+				TemplateKey:         "tpl",
+				MarkdownDescription: "desc",
+			},
+			wantKey:      "minimal-rule",
+			wantName:     "Minimal",
+			wantTpl:      "tpl",
+			wantImpacts:  nil,
+			wantSeverity: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleCreateOptions(tc.parameters)
+
+			if got.CustomKey != tc.wantKey {
+				t.Errorf("GenerateRuleCreateOptions().CustomKey = %v, want %v", got.CustomKey, tc.wantKey)
+			}
+
+			if got.Name != tc.wantName {
+				t.Errorf("GenerateRuleCreateOptions().Name = %v, want %v", got.Name, tc.wantName)
+			}
+
+			if got.TemplateKey != tc.wantTpl {
+				t.Errorf("GenerateRuleCreateOptions().TemplateKey = %v, want %v", got.TemplateKey, tc.wantTpl)
+			}
+
+			if !cmp.Equal(got.Impacts, tc.wantImpacts) {
+				t.Errorf("GenerateRuleCreateOptions().Impacts = %v, want %v", got.Impacts, tc.wantImpacts)
+			}
+
+			if got.Severity != tc.wantSeverity {
+				t.Errorf("GenerateRuleCreateOptions().Severity = %v, want %v", got.Severity, tc.wantSeverity)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleUpdateOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		key          string
+		parameters   *v1alpha1.RuleParameters
+		wantKey      string
+		wantName     string
+		wantImpacts  map[string]string
+		wantSeverity string
+	}{
+		"NilParametersReturnsEmpty": {
+			key:          "",
+			parameters:   nil,
+			wantKey:      "",
+			wantName:     "",
+			wantImpacts:  nil,
+			wantSeverity: "",
+		},
+		"OnlySeverityProvided": {
+			key: "rule-key",
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "rule-key",
+				Name:                "Rule Name",
+				TemplateKey:         "tpl",
+				MarkdownDescription: "desc",
+				Severity:            ptr.To("CRITICAL"),
+			},
+			wantKey:      "rule-key",
+			wantName:     "Rule Name",
+			wantImpacts:  nil,
+			wantSeverity: "CRITICAL",
+		},
+		"OnlyImpactsProvided": {
+			key: "rule-key2",
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "rule-key2",
+				Name:                "Rule 2",
+				TemplateKey:         "tpl2",
+				MarkdownDescription: "desc2",
+				Impacts:             &map[string]string{"MAINTAINABILITY": "MEDIUM"},
+			},
+			wantKey:      "rule-key2",
+			wantName:     "Rule 2",
+			wantImpacts:  map[string]string{"MAINTAINABILITY": "MEDIUM"},
+			wantSeverity: "", // Severity should not be set when Impacts is provided
+		},
+		"BothImpactsAndSeverityProvidedImpactsPrecedence": {
+			// When both Impacts and Severity are provided, Impacts takes precedence
+			// and Severity is omitted to avoid API errors
+			key: "rule-key3",
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "rule-key3",
+				Name:                "Rule 3",
+				TemplateKey:         "tpl3",
+				MarkdownDescription: "desc3",
+				Severity:            ptr.To("BLOCKER"),
+				Impacts:             &map[string]string{"RELIABILITY": "HIGH"},
+			},
+			wantKey:      "rule-key3",
+			wantName:     "Rule 3",
+			wantImpacts:  map[string]string{"RELIABILITY": "HIGH"},
+			wantSeverity: "", // Severity should be empty when Impacts is set
+		},
+		"EmptyImpactsMapFallsBackToSeverity": {
+			// Empty Impacts map should fall back to Severity
+			key: "rule-key4",
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "rule-key4",
+				Name:                "Rule 4",
+				TemplateKey:         "tpl4",
+				MarkdownDescription: "desc4",
+				Severity:            ptr.To("LOW"),
+				Impacts:             &map[string]string{},
+			},
+			wantKey:      "rule-key4",
+			wantName:     "Rule 4",
+			wantImpacts:  nil,
+			wantSeverity: "LOW",
+		},
+		"FullParameters": {
+			key: "full-key",
+			parameters: &v1alpha1.RuleParameters{
+				Key:                        "full-key",
+				Name:                       "Full Rule",
+				TemplateKey:                "tpl",
+				MarkdownDescription:        "full desc",
+				MarkdownNote:               ptr.To("note"),
+				Status:                     ptr.To("READY"),
+				RemediationFnBaseEffort:    ptr.To("1h"),
+				RemediationFnType:          ptr.To("LINEAR"),
+				RemediationFyGapMultiplier: ptr.To("5min"),
+				Impacts:                    &map[string]string{"SECURITY": "MEDIUM"},
+				Tags:                       &[]string{"tag1", "tag2"},
+				Parameters: &map[string]v1alpha1.RuleParameterConfiguration{
+					"p": {DefaultValue: "v"},
+				},
+			},
+			wantKey:      "full-key",
+			wantName:     "Full Rule",
+			wantImpacts:  map[string]string{"SECURITY": "MEDIUM"},
+			wantSeverity: "",
+		},
+		"AllNilOptional": {
+			key: "k",
+			parameters: &v1alpha1.RuleParameters{
+				Key:                 "k",
+				Name:                "n",
+				TemplateKey:         "t",
+				MarkdownDescription: "d",
+			},
+			wantKey:      "k",
+			wantName:     "n",
+			wantImpacts:  nil,
+			wantSeverity: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleUpdateOptions(tc.key, tc.parameters)
+
+			if got.Key != tc.wantKey {
+				t.Errorf("GenerateRuleUpdateOptions().Key = %v, want %v", got.Key, tc.wantKey)
+			}
+
+			if got.Name != tc.wantName {
+				t.Errorf("GenerateRuleUpdateOptions().Name = %v, want %v", got.Name, tc.wantName)
+			}
+
+			if !cmp.Equal(got.Impacts, tc.wantImpacts) {
+				t.Errorf("GenerateRuleUpdateOptions().Impacts = %v, want %v", got.Impacts, tc.wantImpacts)
+			}
+
+			if got.Severity != tc.wantSeverity {
+				t.Errorf("GenerateRuleUpdateOptions().Severity = %v, want %v", got.Severity, tc.wantSeverity)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleDeleteOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		key     string
+		wantKey string
+	}{
+		"ReturnsKey": {
+			key:     "my:rule",
+			wantKey: "my:rule",
+		},
+		"EmptyKey": {
+			key:     "",
+			wantKey: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleDeleteOptions(tc.key)
+
+			if got.Key != tc.wantKey {
+				t.Errorf("GenerateRuleDeleteOptions().Key = %v, want %v", got.Key, tc.wantKey)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleGetOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		key     string
+		wantKey string
+	}{
+		"ReturnsKey": {
+			key:     "my:rule",
+			wantKey: "my:rule",
+		},
+		"EmptyKey": {
+			key:     "",
+			wantKey: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleGetOptions(tc.key)
+
+			if got.Key != tc.wantKey {
+				t.Errorf("GenerateRuleGetOptions().Key = %v, want %v", got.Key, tc.wantKey)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleObservation(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		rule          *sonar.RulesShow
+		wantKey       string
+		wantName      string
+		wantRemFnType string
+	}{
+		"NilRuleReturnsEmpty": {
+			rule:          nil,
+			wantKey:       "",
+			wantName:      "",
+			wantRemFnType: "",
+		},
+		"FullRule": {
+			rule: &sonar.RulesShow{
+				Rule: sonar.RuleDetails{
+					Key:                        "java:S001",
+					Name:                       "Test Rule",
+					Severity:                   "MAJOR",
+					Status:                     "READY",
+					Type:                       "BUG",
+					CleanCodeAttribute:         "CLEAR",
+					CleanCodeAttributeCategory: "INTENTIONAL",
+					RemFnBaseEffort:            "1h",
+					RemFnGapMultiplier:         "5min",
+					RemFnType:                  "LINEAR",
+					RemFnOverloaded:            true,
+					DefaultRemFnBaseEffort:     "2h",
+					DefaultRemFnType:           "CONSTANT",
+					DefaultRemFnGapMultiplier:  "0",
+					InternalKey:                "S001",
+					Lang:                       "java",
+					LangName:                   "Java",
+					GapDescription:             "gap desc",
+					Repo:                       "java",
+					Scope:                      "MAIN",
+					TemplateKey:                "java:template",
+					HTMLDesc:                   "<p>Test</p>",
+					HTMLNote:                   "<p>Note</p>",
+					MdNote:                     "Note",
+					NoteLogin:                  "user",
+					Tags:                       []any{"tag1", "tag2"},
+					SysTags:                    []string{"systag"},
+					IsTemplate:                 false,
+					IsExternal:                 false,
+					Template:                   false,
+					Impacts: []sonar.RuleImpact{
+						{SoftwareQuality: "SECURITY", Severity: "HIGH"},
+					},
+					Params: []sonar.RuleParam{
+						{Key: "p1", DefaultValue: "dv", HTMLDesc: "html desc", Type: "STRING"},
+					},
+					DescriptionSections: []sonar.RuleDescriptionSection{
+						{Content: "content", Key: "ROOT_CAUSE"},
+					},
+				},
+			},
+			wantKey:       "java:S001",
+			wantName:      "Test Rule",
+			wantRemFnType: "LINEAR",
+		},
+		"RuleWithNonStringTags": {
+			rule: &sonar.RulesShow{
+				Rule: sonar.RuleDetails{
+					Key:  "java:S002",
+					Name: "Rule 2",
+					Tags: []any{"str-tag", 42, nil, "str2"},
+				},
+			},
+			wantKey:       "java:S002",
+			wantName:      "Rule 2",
+			wantRemFnType: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleObservation(tc.rule)
+
+			if got.Key != tc.wantKey {
+				t.Errorf("GenerateRuleObservation().Key = %v, want %v", got.Key, tc.wantKey)
+			}
+
+			if got.Name != tc.wantName {
+				t.Errorf("GenerateRuleObservation().Name = %v, want %v", got.Name, tc.wantName)
+			}
+
+			if got.RemFnType != tc.wantRemFnType {
+				t.Errorf("GenerateRuleObservation().RemFnType = %v, want %v", got.RemFnType, tc.wantRemFnType)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleObservationTags(t *testing.T) {
+	t.Parallel()
+
+	rule := &sonar.RulesShow{
+		Rule: sonar.RuleDetails{
+			Key:  "java:S001",
+			Tags: []any{"alpha", "beta"},
+		},
+	}
+
+	got := GenerateRuleObservation(rule)
+
+	if len(got.Tags) != 2 {
+		t.Errorf("GenerateRuleObservation().Tags length = %d, want 2", len(got.Tags))
+	}
+
+	if got.Tags[0] != "alpha" || got.Tags[1] != "beta" {
+		t.Errorf("GenerateRuleObservation().Tags = %v, want [alpha beta]", got.Tags)
+	}
+}
+
+func TestGenerateRuleImpactsObservation(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		impacts   *[]sonar.RuleImpact
+		wantCount int
+		wantMap   map[string]string
+	}{
+		"NilImpactsReturnsEmpty": {
+			impacts:   nil,
+			wantCount: 0,
+			wantMap:   map[string]string{},
+		},
+		"EmptyImpacts": {
+			impacts:   &[]sonar.RuleImpact{},
+			wantCount: 0,
+			wantMap:   map[string]string{},
+		},
+		"SingleImpact": {
+			impacts: &[]sonar.RuleImpact{
+				{SoftwareQuality: "SECURITY", Severity: "HIGH"},
+			},
+			wantCount: 1,
+			wantMap:   map[string]string{"SECURITY": "HIGH"},
+		},
+		"MultipleImpacts": {
+			impacts: &[]sonar.RuleImpact{
+				{SoftwareQuality: "SECURITY", Severity: "HIGH"},
+				{SoftwareQuality: "MAINTAINABILITY", Severity: "LOW"},
+				{SoftwareQuality: "RELIABILITY", Severity: "MEDIUM"},
+			},
+			wantCount: 3,
+			wantMap:   map[string]string{"SECURITY": "HIGH", "MAINTAINABILITY": "LOW", "RELIABILITY": "MEDIUM"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleImpactsObservation(tc.impacts)
+
+			if len(got) != tc.wantCount {
+				t.Errorf("GenerateRuleImpactsObservation() returned %d impacts, want %d", len(got), tc.wantCount)
+			}
+
+			if diff := cmp.Diff(tc.wantMap, got); diff != "" {
+				t.Errorf("GenerateRuleImpactsObservation() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleParametersObservation(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		rule      *[]sonar.RuleParam
+		wantCount int
+	}{
+		"NilRuleReturnsEmpty": {
+			rule:      nil,
+			wantCount: 0,
+		},
+		"EmptyParams": {
+			rule:      &[]sonar.RuleParam{},
+			wantCount: 0,
+		},
+		"SingleParam": {
+			rule: &[]sonar.RuleParam{
+				{Key: "p1", DefaultValue: "dv", HTMLDesc: "html", Desc: "desc", Type: "STRING"},
+			},
+			wantCount: 1,
+		},
+		"MultipleParams": {
+			rule: &[]sonar.RuleParam{
+				{Key: "p1", DefaultValue: "1", Type: "INTEGER"},
+				{Key: "p2", DefaultValue: "text", Type: "STRING"},
+				{Key: "p3", DefaultValue: "true", Type: "BOOLEAN"},
+			},
+			wantCount: 3,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleParametersObservation(tc.rule)
+
+			if len(got) != tc.wantCount {
+				t.Errorf("GenerateRuleParametersObservation() returned %d params, want %d", len(got), tc.wantCount)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleParametersObservationFields(t *testing.T) {
+	t.Parallel()
+
+	rule := &[]sonar.RuleParam{
+		{Key: "myParam", DefaultValue: "myDefault", HTMLDesc: "myHTML", Desc: "myDesc", Type: "TEXT"},
+	}
+
+	got := GenerateRuleParametersObservation(rule)
+
+	if len(got) != 1 {
+		t.Fatalf("Expected 1 param, got %d", len(got))
+	}
+
+	want := v1alpha1.RuleParameterObservation{
+		Key:          "myParam",
+		DefaultValue: "myDefault",
+		HTMLDesc:     "myHTML",
+		Desc:         "myDesc",
+		Type:         "TEXT",
+	}
+
+	if diff := cmp.Diff(want, got[0]); diff != "" {
+		t.Errorf("GenerateRuleParametersObservation()[0] mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestGenerateRuleDescriptionSectionsObservation(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		sections  *[]sonar.RuleDescriptionSection
+		wantCount int
+	}{
+		"NilSectionsReturnsEmpty": {
+			sections:  nil,
+			wantCount: 0,
+		},
+		"EmptySections": {
+			sections:  &[]sonar.RuleDescriptionSection{},
+			wantCount: 0,
+		},
+		"SingleSection": {
+			sections: &[]sonar.RuleDescriptionSection{
+				{Content: "content", Key: "ROOT_CAUSE"},
+			},
+			wantCount: 1,
+		},
+		"MultipleSections": {
+			sections: &[]sonar.RuleDescriptionSection{
+				{Content: "c1", Key: "ROOT_CAUSE"},
+				{Content: "c2", Key: "HOW_TO_FIX"},
+				{Content: "c3", Key: "ASSESS_THE_PROBLEM"},
+			},
+			wantCount: 3,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleDescriptionSectionsObservation(tc.sections)
+
+			if len(got) != tc.wantCount {
+				t.Errorf("GenerateRuleDescriptionSectionsObservation() returned %d sections, want %d", len(got), tc.wantCount)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleDescriptionSectionsObservationWithContext(t *testing.T) {
+	t.Parallel()
+
+	sections := &[]sonar.RuleDescriptionSection{
+		{
+			Content: "some content",
+			Key:     "ROOT_CAUSE",
+			Context: sonar.RuleDescriptionSectionContext{
+				DisplayName: "Spring",
+				Key:         "spring",
+			},
+		},
+	}
+
+	got := GenerateRuleDescriptionSectionsObservation(sections)
+
+	if len(got) != 1 {
+		t.Fatalf("Expected 1 section, got %d", len(got))
+	}
+
+	if got[0].Context.DisplayName != "Spring" {
+		t.Errorf("Expected context DisplayName 'Spring', got %q", got[0].Context.DisplayName)
+	}
+
+	if got[0].Context.Key != "spring" {
+		t.Errorf("Expected context Key 'spring', got %q", got[0].Context.Key)
+	}
+}
+
+func TestGenerateRuleDescriptionContextObservation(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		context     *sonar.RuleDescriptionSectionContext
+		wantDisplay string
+		wantKey     string
+	}{
+		"NilContextReturnsEmpty": {
+			context:     nil,
+			wantDisplay: "",
+			wantKey:     "",
+		},
+		"ValidContext": {
+			context: &sonar.RuleDescriptionSectionContext{
+				DisplayName: "Spring Boot",
+				Key:         "spring-boot",
+			},
+			wantDisplay: "Spring Boot",
+			wantKey:     "spring-boot",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := GenerateRuleDescriptionContextObservation(tc.context)
+
+			if got.DisplayName != tc.wantDisplay {
+				t.Errorf("GenerateRuleDescriptionContextObservation().DisplayName = %v, want %v", got.DisplayName, tc.wantDisplay)
+			}
+
+			if got.Key != tc.wantKey {
+				t.Errorf("GenerateRuleDescriptionContextObservation().Key = %v, want %v", got.Key, tc.wantKey)
+			}
+		})
+	}
+}
+
+func TestIsRuleUpToDate(t *testing.T) { //nolint:maintidx // comprehensive table-driven test covering many field combinations
+	t.Parallel()
+
+	type fields struct {
+		spec        *v1alpha1.RuleParameters
+		observation *v1alpha1.RuleObservation
+	}
+
+	tests := map[string]struct {
+		fields fields
+		want   bool
+	}{
+		"NilSpecReturnsTrue": {
+			fields: fields{
+				spec:        nil,
+				observation: &v1alpha1.RuleObservation{Key: "k"},
+			},
+			want: true,
+		},
+		"NilObservationReturnsFalse": {
+			fields: fields{
+				spec:        &v1alpha1.RuleParameters{Key: "k", Name: "n", TemplateKey: "t"},
+				observation: nil,
+			},
+			want: false,
+		},
+		"AllMatchingFieldsReturnsTrue": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "java:S001",
+					Name:        "Test Rule",
+					TemplateKey: "java:template",
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "java:S001",
+					Name:        "Test Rule",
+					TemplateKey: "java:template",
+				},
+			},
+			want: true,
+		},
+		"DifferentKeyReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "java:custom-rule-1",
+					Name:        "Test",
+					TemplateKey: "t",
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "java:custom-rule-2",
+					Name:        "Test",
+					TemplateKey: "t",
+				},
+			},
+			want: false,
+		},
+		"UnprefixedSpecKeyMatchesPrefixedObservationKey": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "custom-rule-1",
+					Name:        "Test",
+					TemplateKey: "t",
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "java:custom-rule-1",
+					Name:        "Test",
+					TemplateKey: "t",
+				},
+			},
+			want: true,
+		},
+		"DifferentNameReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "Name1",
+					TemplateKey: "t",
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "Name2",
+					TemplateKey: "t",
+				},
+			},
+			want: false,
+		},
+		"DifferentTemplateKeyReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "tpl1",
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "tpl2",
+				},
+			},
+			want: false,
+		},
+		"MatchingCleanCodeAttribute": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:                "k",
+					Name:               "n",
+					TemplateKey:        "t",
+					CleanCodeAttribute: ptr.To("CLEAR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:                "k",
+					Name:               "n",
+					TemplateKey:        "t",
+					CleanCodeAttribute: "CLEAR",
+				},
+			},
+			want: true,
+		},
+		"DifferentCleanCodeAttributeReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:                "k",
+					Name:               "n",
+					TemplateKey:        "t",
+					CleanCodeAttribute: ptr.To("CLEAR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:                "k",
+					Name:               "n",
+					TemplateKey:        "t",
+					CleanCodeAttribute: "COMPLETE",
+				},
+			},
+			want: false,
+		},
+		"MatchingImpacts": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     &map[string]string{"SECURITY": "HIGH"},
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     map[string]string{"SECURITY": "HIGH"},
+				},
+			},
+			want: true,
+		},
+		"DifferentImpactsReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     &map[string]string{"SECURITY": "HIGH"},
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     map[string]string{"SECURITY": "LOW"},
+				},
+			},
+			want: false,
+		},
+		"NonEmptyImpactsTakePrecedenceOverSeverity": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     &map[string]string{"SECURITY": "HIGH"},
+					Severity:    ptr.To("MAJOR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     map[string]string{"SECURITY": "HIGH"},
+					Severity:    "MINOR",
+				},
+			},
+			want: true,
+		},
+		"NonEmptyImpactsStillFailWhenImpactsDiffer": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     &map[string]string{"SECURITY": "HIGH"},
+					Severity:    ptr.To("MAJOR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     map[string]string{"SECURITY": "LOW"},
+					Severity:    "MAJOR",
+				},
+			},
+			want: false,
+		},
+		"EmptyImpactsFallbackToSeverity": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     &map[string]string{},
+					Severity:    ptr.To("MAJOR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     map[string]string{"SECURITY": "LOW"},
+					Severity:    "MAJOR",
+				},
+			},
+			want: true,
+		},
+		"EmptyImpactsFallbackToSeverityMismatchReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     &map[string]string{},
+					Severity:    ptr.To("MAJOR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     map[string]string{"SECURITY": "HIGH"},
+					Severity:    "MINOR",
+				},
+			},
+			want: false,
+		},
+		"EmptyImpactsAndNilSeverityIgnoreBoth": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     &map[string]string{},
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Impacts:     map[string]string{"SECURITY": "LOW"},
+					Severity:    "BLOCKER",
+				},
+			},
+			want: true,
+		},
+		"MatchingSeverity": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Severity:    ptr.To("MAJOR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Severity:    "MAJOR",
+				},
+			},
+			want: true,
+		},
+		"DifferentSeverityReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Severity:    ptr.To("MAJOR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Severity:    "MINOR",
+				},
+			},
+			want: false,
+		},
+		"MatchingStatus": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Status:      ptr.To("READY"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Status:      "READY",
+				},
+			},
+			want: true,
+		},
+		"DifferentStatusReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Status:      ptr.To("READY"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Status:      "DEPRECATED",
+				},
+			},
+			want: false,
+		},
+		"MatchingRemFnBaseEffort": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:                     "k",
+					Name:                    "n",
+					TemplateKey:             "t",
+					RemediationFnBaseEffort: ptr.To("1h"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:             "k",
+					Name:            "n",
+					TemplateKey:     "t",
+					RemFnBaseEffort: "1h",
+				},
+			},
+			want: true,
+		},
+		"DifferentRemFnBaseEffortReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:                     "k",
+					Name:                    "n",
+					TemplateKey:             "t",
+					RemediationFnBaseEffort: ptr.To("1h"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:             "k",
+					Name:            "n",
+					TemplateKey:     "t",
+					RemFnBaseEffort: "2h",
+				},
+			},
+			want: false,
+		},
+		"MatchingRemFnType": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:               "k",
+					Name:              "n",
+					TemplateKey:       "t",
+					RemediationFnType: ptr.To("LINEAR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					RemFnType:   "LINEAR",
+				},
+			},
+			want: true,
+		},
+		"DifferentRemFnTypeReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:               "k",
+					Name:              "n",
+					TemplateKey:       "t",
+					RemediationFnType: ptr.To("LINEAR"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					RemFnType:   "CONSTANT",
+				},
+			},
+			want: false,
+		},
+		"MatchingRemFnGapMultiplier": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:                        "k",
+					Name:                       "n",
+					TemplateKey:                "t",
+					RemediationFyGapMultiplier: ptr.To("5min"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:                "k",
+					Name:               "n",
+					TemplateKey:        "t",
+					RemFnGapMultiplier: "5min",
+				},
+			},
+			want: true,
+		},
+		"DifferentRemFnGapMultiplierReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:                        "k",
+					Name:                       "n",
+					TemplateKey:                "t",
+					RemediationFyGapMultiplier: ptr.To("5min"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:                "k",
+					Name:               "n",
+					TemplateKey:        "t",
+					RemFnGapMultiplier: "10min",
+				},
+			},
+			want: false,
+		},
+		"MatchingType": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Type:        ptr.To("BUG"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Type:        "BUG",
+				},
+			},
+			want: true,
+		},
+		"DifferentTypeReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Type:        ptr.To("BUG"),
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Type:        "CODE_SMELL",
+				},
+			},
+			want: false,
+		},
+		"MatchingTags": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Tags:        &[]string{"tag1", "tag2"},
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Tags:        []string{"tag1", "tag2"},
+				},
+			},
+			want: true,
+		},
+		"MatchingTagsDifferentOrder": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Tags:        &[]string{"crossplane", "example", "integration"},
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Tags:        []string{"crossplane", "integration", "example"},
+				},
+			},
+			want: true,
+		},
+		"DifferentTagsReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Tags:        &[]string{"tag1"},
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Tags:        []string{"tag2"},
+				},
+			},
+			want: false,
+		},
+		"NilSpecTagsIgnored": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Tags:        []string{"tag1", "tag2"},
+				},
+			},
+			want: true,
+		},
+		"MatchingParameters": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Parameters: &map[string]v1alpha1.RuleParameterConfiguration{
+						"p1": {DefaultValue: "val1", Type: "STRING"},
+					},
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Params: []v1alpha1.RuleParameterObservation{
+						{Key: "p1", DefaultValue: "val1", Type: "STRING"},
+					},
+				},
+			},
+			want: true,
+		},
+		"DifferentParametersReturnsFalse": {
+			fields: fields{
+				spec: &v1alpha1.RuleParameters{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Parameters: &map[string]v1alpha1.RuleParameterConfiguration{
+						"p1": {DefaultValue: "val1", Type: "STRING"},
+					},
+				},
+				observation: &v1alpha1.RuleObservation{
+					Key:         "k",
+					Name:        "n",
+					TemplateKey: "t",
+					Params: []v1alpha1.RuleParameterObservation{
+						{Key: "p1", DefaultValue: "val2", Type: "STRING"},
+					},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := IsRuleUpToDate(tc.fields.spec, tc.fields.observation)
+
+			if got != tc.want {
+				t.Errorf("IsRuleUpToDate() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAreRuleParametersUpToDate(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		spec        *map[string]v1alpha1.RuleParameterConfiguration
+		observation *[]v1alpha1.RuleParameterObservation
+		want        bool
+	}{
+		"NilSpecReturnsTrue": {
+			spec:        nil,
+			observation: &[]v1alpha1.RuleParameterObservation{{Key: "p1"}},
+			want:        true,
+		},
+		"NilObservationReturnsFalse": {
+			spec:        &map[string]v1alpha1.RuleParameterConfiguration{"p1": {DefaultValue: "v"}},
+			observation: nil,
+			want:        false,
+		},
+		"DifferentLengthReturnsFalse": {
+			spec: &map[string]v1alpha1.RuleParameterConfiguration{
+				"p1": {DefaultValue: "v1"},
+				"p2": {DefaultValue: "v2"},
+			},
+			observation: &[]v1alpha1.RuleParameterObservation{
+				{Key: "p1", DefaultValue: "v1"},
+			},
+			want: false,
+		},
+		"MatchingParametersReturnsTrue": {
+			spec: &map[string]v1alpha1.RuleParameterConfiguration{
+				"p1": {DefaultValue: "v1", Type: "STRING"},
+			},
+			observation: &[]v1alpha1.RuleParameterObservation{
+				{Key: "p1", DefaultValue: "v1", Type: "STRING"},
+			},
+			want: true,
+		},
+		"DifferentDefaultValueReturnsFalse": {
+			spec: &map[string]v1alpha1.RuleParameterConfiguration{
+				"p1": {DefaultValue: "v1"},
+			},
+			observation: &[]v1alpha1.RuleParameterObservation{
+				{Key: "p1", DefaultValue: "v2"},
+			},
+			want: false,
+		},
+		"DifferentTypeReturnsFalse": {
+			spec: &map[string]v1alpha1.RuleParameterConfiguration{
+				"p1": {DefaultValue: "v1", Type: "STRING"},
+			},
+			observation: &[]v1alpha1.RuleParameterObservation{
+				{Key: "p1", DefaultValue: "v1", Type: "INTEGER"},
+			},
+			want: false,
+		},
+		"EmptySpecEmptyObservationReturnsTrue": {
+			spec:        &map[string]v1alpha1.RuleParameterConfiguration{},
+			observation: &[]v1alpha1.RuleParameterObservation{},
+			want:        true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := areRuleParametersUpToDate(tc.spec, tc.observation)
+
+			if got != tc.want {
+				t.Errorf("areRuleParametersUpToDate() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLateInitializeRule(t *testing.T) { //nolint:gocognit,maintidx // complexity from comprehensive parallel sub-tests
+	t.Parallel()
+
+	tests := map[string]struct {
+		spec        *v1alpha1.RuleParameters
+		observation *v1alpha1.RuleObservation
+		checkFn     func(t *testing.T, spec *v1alpha1.RuleParameters)
+	}{
+		"NilSpecNoOp": {
+			spec:        nil,
+			observation: &v1alpha1.RuleObservation{Severity: "MAJOR"},
+			checkFn:     func(t *testing.T, _ *v1alpha1.RuleParameters) { t.Helper() },
+		},
+		"NilObservationNoOp": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: nil,
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.Severity != nil {
+					t.Errorf("Expected Severity to remain nil, got %v", spec.Severity)
+				}
+			},
+		},
+		"DoesNotLateInitializeSeverity": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{Severity: "MAJOR"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.Severity != nil {
+					t.Errorf("Expected Severity to remain nil, got %v", spec.Severity)
+				}
+			},
+		},
+		"DoesNotOverrideSeverity": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+				Severity:    ptr.To("MINOR"),
+			},
+			observation: &v1alpha1.RuleObservation{Severity: "MAJOR"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.Severity == nil || *spec.Severity != "MINOR" {
+					t.Errorf("Expected Severity to remain 'MINOR', got %v", spec.Severity)
+				}
+			},
+		},
+		"InitializesStatus": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{Status: "READY"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.Status == nil || *spec.Status != "READY" {
+					t.Errorf("Expected Status to be initialized to 'READY', got %v", spec.Status)
+				}
+			},
+		},
+		"InitializesCleanCodeAttribute": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{CleanCodeAttribute: "CLEAR"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.CleanCodeAttribute == nil || *spec.CleanCodeAttribute != "CLEAR" {
+					t.Errorf("Expected CleanCodeAttribute to be initialized to 'CLEAR', got %v", spec.CleanCodeAttribute)
+				}
+			},
+		},
+		"InitializesMarkdownNote": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{MdNote: "mynote"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.MarkdownNote == nil || *spec.MarkdownNote != "mynote" {
+					t.Errorf("Expected MarkdownNote to be initialized to 'mynote', got %v", spec.MarkdownNote)
+				}
+			},
+		},
+		"InitializesRemediationFnBaseEffort": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{RemFnBaseEffort: "1h"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.RemediationFnBaseEffort == nil || *spec.RemediationFnBaseEffort != "1h" {
+					t.Errorf("Expected RemediationFnBaseEffort to be '1h', got %v", spec.RemediationFnBaseEffort)
+				}
+			},
+		},
+		"InitializesRemediationFnType": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{RemFnType: "LINEAR"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.RemediationFnType == nil || *spec.RemediationFnType != "LINEAR" {
+					t.Errorf("Expected RemediationFnType to be 'LINEAR', got %v", spec.RemediationFnType)
+				}
+			},
+		},
+		"InitializesRemediationFyGapMultiplier": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{RemFnGapMultiplier: "5min"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.RemediationFyGapMultiplier == nil || *spec.RemediationFyGapMultiplier != "5min" {
+					t.Errorf("Expected RemediationFyGapMultiplier to be '5min', got %v", spec.RemediationFyGapMultiplier)
+				}
+			},
+		},
+		"InitializesType": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{Type: "BUG"},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.Type == nil || *spec.Type != "BUG" {
+					t.Errorf("Expected Type to be initialized to 'BUG', got %v", spec.Type)
+				}
+			},
+		},
+		"DoesNotLateInitializeImpacts": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{
+				Impacts: map[string]string{"SECURITY": "HIGH"},
+			},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.Impacts != nil {
+					t.Errorf("Expected Impacts to remain nil, got %v", *spec.Impacts)
+				}
+			},
+		},
+		"DoesNotOverrideImpacts": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+				Impacts:     &map[string]string{"MAINTAINABILITY": "LOW"},
+			},
+			observation: &v1alpha1.RuleObservation{
+				Impacts: map[string]string{"SECURITY": "HIGH"},
+			},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				imp := *spec.Impacts
+				if _, ok := imp["MAINTAINABILITY"]; !ok {
+					t.Error("Expected Impacts to remain MAINTAINABILITY, got overridden")
+				}
+			},
+		},
+		"InitializesTags": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{
+				Tags: []string{"tag1", "tag2"},
+			},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.Tags == nil {
+					t.Error("Expected Tags to be initialized, got nil")
+
+					return
+				}
+
+				if len(*spec.Tags) != 2 {
+					t.Errorf("Expected 2 tags, got %d", len(*spec.Tags))
+				}
+			},
+		},
+		"DoesNotOverrideTags": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+				Tags:        &[]string{"existing"},
+			},
+			observation: &v1alpha1.RuleObservation{
+				Tags: []string{"tag1", "tag2"},
+			},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if len(*spec.Tags) != 1 || (*spec.Tags)[0] != "existing" {
+					t.Errorf("Expected Tags to remain ['existing'], got %v", *spec.Tags)
+				}
+			},
+		},
+		"EmptyObservationTagsDoesNotInitialize": {
+			spec: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			observation: &v1alpha1.RuleObservation{Tags: []string{}},
+			checkFn: func(t *testing.T, spec *v1alpha1.RuleParameters) {
+				t.Helper()
+
+				if spec.Tags != nil {
+					t.Errorf("Expected Tags to remain nil, got %v", spec.Tags)
+				}
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			LateInitializeRule(tc.spec, tc.observation)
+			tc.checkFn(t, tc.spec)
+		})
+	}
+}
+
+func TestIsRuleLateInitialized(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		before *v1alpha1.RuleParameters
+		after  *v1alpha1.RuleParameters
+		want   bool
+	}{
+		"NilBeforeNilAfterReturnsFalse": {
+			before: &v1alpha1.RuleParameters{Key: "k", Name: "n", TemplateKey: "t"},
+			after:  &v1alpha1.RuleParameters{Key: "k", Name: "n", TemplateKey: "t"},
+			want:   false,
+		},
+		"SeverityAddedReturnsTrue": {
+			before: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+			},
+			after: &v1alpha1.RuleParameters{
+				Key:         "k",
+				Name:        "n",
+				TemplateKey: "t",
+				Severity:    ptr.To("MAJOR"),
+			},
+			want: true,
+		},
+		"NothingChangedReturnsFalse": {
+			before: &v1alpha1.RuleParameters{
+				Key:      "k",
+				Name:     "n",
+				Severity: ptr.To("MAJOR"),
+			},
+			after: &v1alpha1.RuleParameters{
+				Key:      "k",
+				Name:     "n",
+				Severity: ptr.To("MAJOR"),
+			},
+			want: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := IsRuleLateInitialized(tc.before, tc.after)
+
+			if got != tc.want {
+				t.Errorf("IsRuleLateInitialized() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleParametersOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		spec      *map[string]v1alpha1.RuleParameterConfiguration
+		wantKeys  []string
+		wantEmpty bool
+	}{
+		"NilSpecReturnsEmpty": {
+			spec:      nil,
+			wantEmpty: true,
+		},
+		"EmptySpecReturnsEmpty": {
+			spec:      &map[string]v1alpha1.RuleParameterConfiguration{},
+			wantEmpty: true,
+		},
+		"SingleParameter": {
+			spec: &map[string]v1alpha1.RuleParameterConfiguration{
+				"maxLine": {DefaultValue: "100"},
+			},
+			wantKeys:  []string{"maxLine"},
+			wantEmpty: false,
+		},
+		"MultipleParameters": {
+			spec: &map[string]v1alpha1.RuleParameterConfiguration{
+				"maxLine": {DefaultValue: "100"},
+				"minLine": {DefaultValue: "1"},
+			},
+			wantKeys:  []string{"maxLine", "minLine"},
+			wantEmpty: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := generateRuleParametersOptions(tc.spec)
+
+			if tc.wantEmpty && len(got) != 0 {
+				t.Errorf("generateRuleParametersOptions() want empty map, got %v", got)
+			}
+
+			for _, key := range tc.wantKeys {
+				if _, ok := got[key]; !ok {
+					t.Errorf("generateRuleParametersOptions() missing key %q", key)
+				}
 			}
 		})
 	}

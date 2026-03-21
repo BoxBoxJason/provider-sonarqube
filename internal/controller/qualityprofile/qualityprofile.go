@@ -80,7 +80,6 @@ func Setup(mgr ctrl.Manager, opts controller.Options) error {
 		}),
 		managed.WithLogger(opts.Logger.WithValues("controller", name)),
 		managed.WithPollInterval(opts.PollInterval),
-		//nolint:staticcheck // GetEventRecorderFor is marked as deprecated but is not yet replaced with an alternative in controller-runtime, and the APIRecorder is still required for recording events.
 		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
 	}
 
@@ -182,7 +181,7 @@ func (c *external) Observe(ctx context.Context, managedResource resource.Managed
 	}
 
 	// Retrieve the Quality Profile from SonarQube
-	qualityProfile, resp, err := c.qualityProfilesClient.Show(&sonar.QualityprofilesShowOption{ //nolint:bodyclose // closed via helpers.CloseBody
+	qualityProfile, resp, err := c.qualityProfilesClient.Show(&sonar.QualityprofilesShowOptions{ //nolint:bodyclose // closed via helpers.CloseBody
 		Key: externalName,
 	})
 	defer helpers.CloseBody(resp)
@@ -399,12 +398,17 @@ func (c *external) activateMissingQualityProfileRules(externalName string, assoc
 		helpers.CloseBody(activateResp)
 
 		if err != nil {
-			errs = append(errs, errors.Wrapf(err, "cannot activate rule %s", ruleSpec.Rule))
+			errs = append(errs, errors.Wrapf(err, "cannot activate rule %s", ptr.Deref(ruleSpec.Rule, "")))
 
 			continue
 		}
 		// Update association to reflect the activation (mark as up to date)
-		associations[ruleSpec.Rule] = instance.QualityProfileRuleAssociation{
+		ruleKey := ptr.Deref(ruleSpec.Rule, "")
+		if ruleKey == "" {
+			continue
+		}
+
+		associations[ruleKey] = instance.QualityProfileRuleAssociation{
 			Spec:        ruleSpec,
 			Observation: nil, // Will be populated on next Observe
 			UpToDate:    true,
@@ -431,12 +435,17 @@ func (c *external) updateOutdatedQualityProfileRules(externalName string, associ
 		helpers.CloseBody(activateResp)
 
 		if err != nil {
-			errs = append(errs, errors.Wrapf(err, "cannot update rule %s", assoc.Spec.Rule))
+			errs = append(errs, errors.Wrapf(err, "cannot update rule %s", ptr.Deref(assoc.Spec.Rule, "")))
 
 			continue
 		}
 		// Update association to reflect the update
-		associations[assoc.Spec.Rule] = instance.QualityProfileRuleAssociation{
+		ruleKey := ptr.Deref(assoc.Spec.Rule, "")
+		if ruleKey == "" {
+			continue
+		}
+
+		associations[ruleKey] = instance.QualityProfileRuleAssociation{
 			Spec:        assoc.Spec,
 			Observation: assoc.Observation,
 			UpToDate:    true,

@@ -32,7 +32,7 @@ func TestGenerateProjectLinksCreateOptions(t *testing.T) {
 	tests := map[string]struct {
 		projectID string
 		link      v1alpha1.ProjectLinkParameters
-		want      *sonar.ProjectLinksCreateOption
+		want      *sonar.ProjectLinksCreateOptions
 	}{
 		"BasicCreateOption": {
 			projectID: "my-project",
@@ -40,7 +40,7 @@ func TestGenerateProjectLinksCreateOptions(t *testing.T) {
 				Name: "homepage",
 				URL:  "https://example.com",
 			},
-			want: &sonar.ProjectLinksCreateOption{
+			want: &sonar.ProjectLinksCreateOptions{
 				ProjectID: "my-project",
 				Name:      "homepage",
 				URL:       "https://example.com",
@@ -53,7 +53,7 @@ func TestGenerateProjectLinksCreateOptions(t *testing.T) {
 				Name: "ci",
 				URL:  "https://ci.example.com",
 			},
-			want: &sonar.ProjectLinksCreateOption{
+			want: &sonar.ProjectLinksCreateOptions{
 				ProjectID: "my-project",
 				Name:      "ci",
 				URL:       "https://ci.example.com",
@@ -78,11 +78,11 @@ func TestGenerateProjectLinksDeleteOptions(t *testing.T) {
 
 	tests := map[string]struct {
 		linkID string
-		want   *sonar.ProjectLinksDeleteOption
+		want   *sonar.ProjectLinksDeleteOptions
 	}{
 		"BasicDeleteOption": {
 			linkID: "link-123",
-			want: &sonar.ProjectLinksDeleteOption{
+			want: &sonar.ProjectLinksDeleteOptions{
 				ID: "link-123",
 			},
 		},
@@ -105,11 +105,11 @@ func TestGenerateProjectLinksSearchOptions(t *testing.T) {
 
 	tests := map[string]struct {
 		projectID string
-		want      *sonar.ProjectLinksSearchOption
+		want      *sonar.ProjectLinksSearchOptions
 	}{
 		"BasicSearchOption": {
 			projectID: "my-project",
-			want: &sonar.ProjectLinksSearchOption{
+			want: &sonar.ProjectLinksSearchOptions{
 				ProjectID: "my-project",
 			},
 		},

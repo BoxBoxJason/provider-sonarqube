@@ -17,7 +17,6 @@ limitations under the License.
 package fake
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/boxboxjason/sonarqube-client-go/sonar"
@@ -25,19 +24,17 @@ import (
 	"github.com/crossplane/provider-sonarqube/internal/clients/instance"
 )
 
-var errRulesNotImplemented = errors.New("not implemented")
-
 // MockRulesClient is a mock implementation of the RulesClient interface.
 type MockRulesClient struct {
 	AppFn          func() (v *sonar.RulesApp, resp *http.Response, err error)
-	CreateFn       func(opt *sonar.RulesCreateOption) (v *sonar.RulesCreate, resp *http.Response, err error)
-	DeleteFn       func(opt *sonar.RulesDeleteOption) (resp *http.Response, err error)
-	ListFn         func(opt *sonar.RulesListOption) (v *string, resp *http.Response, err error)
-	RepositoriesFn func(opt *sonar.RulesRepositoriesOption) (v *sonar.RulesRepositories, resp *http.Response, err error)
-	SearchFn       func(opt *sonar.RulesSearchOption) (v *sonar.RulesSearch, resp *http.Response, err error)
-	ShowFn         func(opt *sonar.RulesShowOption) (v *sonar.RulesShow, resp *http.Response, err error)
-	TagsFn         func(opt *sonar.RulesTagsOption) (v *sonar.RulesTags, resp *http.Response, err error)
-	UpdateFn       func(opt *sonar.RulesUpdateOption) (v *sonar.RulesUpdate, resp *http.Response, err error)
+	CreateFn       func(opt *sonar.RulesCreateOptions) (v *sonar.RulesCreate, resp *http.Response, err error)
+	DeleteFn       func(opt *sonar.RulesDeleteOptions) (resp *http.Response, err error)
+	ListFn         func(opt *sonar.RulesListOptions) (v *string, resp *http.Response, err error)
+	RepositoriesFn func(opt *sonar.RulesRepositoriesOptions) (v *sonar.RulesRepositories, resp *http.Response, err error)
+	SearchFn       func(opt *sonar.RulesSearchOptions) (v *sonar.RulesSearch, resp *http.Response, err error)
+	ShowFn         func(opt *sonar.RulesShowOptions) (v *sonar.RulesShow, resp *http.Response, err error)
+	TagsFn         func(opt *sonar.RulesTagsOptions) (v *sonar.RulesTags, resp *http.Response, err error)
+	UpdateFn       func(opt *sonar.RulesUpdateOptions) (v *sonar.RulesUpdate, resp *http.Response, err error)
 }
 
 // Ensure MockRulesClient implements RulesClient.
@@ -49,77 +46,77 @@ func (m *MockRulesClient) App() (v *sonar.RulesApp, resp *http.Response, err err
 		return m.AppFn()
 	}
 
-	return nil, nil, errRulesNotImplemented
+	return nil, nil, errNotImplemented
 }
 
 // Create implements RulesClient.Create.
-func (m *MockRulesClient) Create(opt *sonar.RulesCreateOption) (v *sonar.RulesCreate, resp *http.Response, err error) {
+func (m *MockRulesClient) Create(opt *sonar.RulesCreateOptions) (v *sonar.RulesCreate, resp *http.Response, err error) {
 	if m.CreateFn != nil {
 		return m.CreateFn(opt)
 	}
 
-	return nil, nil, errRulesNotImplemented
+	return nil, nil, errNotImplemented
 }
 
 // Delete implements RulesClient.Delete.
-func (m *MockRulesClient) Delete(opt *sonar.RulesDeleteOption) (resp *http.Response, err error) {
+func (m *MockRulesClient) Delete(opt *sonar.RulesDeleteOptions) (resp *http.Response, err error) {
 	if m.DeleteFn != nil {
 		return m.DeleteFn(opt)
 	}
 
-	return nil, errRulesNotImplemented
+	return nil, errNotImplemented
 }
 
 // List implements RulesClient.List.
-func (m *MockRulesClient) List(opt *sonar.RulesListOption) (v *string, resp *http.Response, err error) {
+func (m *MockRulesClient) List(opt *sonar.RulesListOptions) (v *string, resp *http.Response, err error) {
 	if m.ListFn != nil {
 		return m.ListFn(opt)
 	}
 
-	return nil, nil, errRulesNotImplemented
+	return nil, nil, errNotImplemented
 }
 
 // Repositories implements RulesClient.Repositories.
-func (m *MockRulesClient) Repositories(opt *sonar.RulesRepositoriesOption) (v *sonar.RulesRepositories, resp *http.Response, err error) {
+func (m *MockRulesClient) Repositories(opt *sonar.RulesRepositoriesOptions) (v *sonar.RulesRepositories, resp *http.Response, err error) {
 	if m.RepositoriesFn != nil {
 		return m.RepositoriesFn(opt)
 	}
 
-	return nil, nil, errRulesNotImplemented
+	return nil, nil, errNotImplemented
 }
 
 // Search implements RulesClient.Search.
-func (m *MockRulesClient) Search(opt *sonar.RulesSearchOption) (v *sonar.RulesSearch, resp *http.Response, err error) {
+func (m *MockRulesClient) Search(opt *sonar.RulesSearchOptions) (v *sonar.RulesSearch, resp *http.Response, err error) {
 	if m.SearchFn != nil {
 		return m.SearchFn(opt)
 	}
 
-	return nil, nil, errRulesNotImplemented
+	return nil, nil, errNotImplemented
 }
 
 // Show implements RulesClient.Show.
-func (m *MockRulesClient) Show(opt *sonar.RulesShowOption) (v *sonar.RulesShow, resp *http.Response, err error) {
+func (m *MockRulesClient) Show(opt *sonar.RulesShowOptions) (v *sonar.RulesShow, resp *http.Response, err error) {
 	if m.ShowFn != nil {
 		return m.ShowFn(opt)
 	}
 
-	return nil, nil, errRulesNotImplemented
+	return nil, nil, errNotImplemented
 }
 
 // Tags implements RulesClient.Tags.
-func (m *MockRulesClient) Tags(opt *sonar.RulesTagsOption) (v *sonar.RulesTags, resp *http.Response, err error) {
+func (m *MockRulesClient) Tags(opt *sonar.RulesTagsOptions) (v *sonar.RulesTags, resp *http.Response, err error) {
 	if m.TagsFn != nil {
 		return m.TagsFn(opt)
 	}
 
-	return nil, nil, errRulesNotImplemented
+	return nil, nil, errNotImplemented
 }
 
 // Update implements RulesClient.Update.
-func (m *MockRulesClient) Update(opt *sonar.RulesUpdateOption) (v *sonar.RulesUpdate, resp *http.Response, err error) {
+func (m *MockRulesClient) Update(opt *sonar.RulesUpdateOptions) (v *sonar.RulesUpdate, resp *http.Response, err error) {
 	if m.UpdateFn != nil {
 		return m.UpdateFn(opt)
 	}
 
-	return nil, nil, errRulesNotImplemented
+	return nil, nil, errNotImplemented
 }
