@@ -8,6 +8,10 @@ on:
   pull_request: {}
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   # Common versions
   GO_VERSION: "1.25.8"
@@ -188,8 +192,15 @@ jobs:
         with:
           version: ${{ env.DOCKER_BUILDX_VERSION }}
 
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Login to Upbound
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         if: env.UPBOUND_MARKETPLACE_PUSH_ROBOT_USR != ''
         with:
           registry: xpkg.upbound.io
@@ -244,5 +255,7 @@ jobs:
           path: _output/**
 
       - name: Publish Artifacts
-        if: env.UPBOUND_MARKETPLACE_PUSH_ROBOT_USR != ''
+        if: github.event_name != 'pull_request'
+        env:
+          XPKG_REG_ORGS: ${{ env.UPBOUND_MARKETPLACE_PUSH_ROBOT_USR != '' && 'xpkg.upbound.io/crossplane-contrib ghcr.io/crossplane-contrib' || 'ghcr.io/crossplane-contrib' }}
         run: make publish BRANCH_NAME=${GITHUB_REF##*/}
