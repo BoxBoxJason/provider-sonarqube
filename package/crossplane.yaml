@@ -4,18 +4,27 @@ metadata:
   name: provider-sonarqube
   annotations:
     meta.crossplane.io/maintainer: Crossplane Maintainers <info@crossplane.io>
-    meta.crossplane.io/source: github.com/crossplane/provider-sonarqube
+    meta.crossplane.io/source: github.com/crossplane-contrib/provider-sonarqube
     meta.crossplane.io/license: Apache-2.0
     meta.crossplane.io/description: |
-      The SonarQube Crossplane provider adds support for
-      managing SonarQube resources in Kubernetes.
+      Crossplane provider for managing SonarQube resources in Kubernetes.
 
     meta.crossplane.io/readme: |
-      `provider-sonarqube` is the Crossplane infrastructure provider for
-      [SonarQube](https://www.sonarqube.org/).
+      `provider-sonarqube` brings SonarQube configuration under Crossplane management.
+
+      The provider currently covers SonarQube projects, quality gates, quality
+      profiles, rules, settings, IAM groups, permissions templates, and GitLab ALM
+      integration.
 
       Available resources and their fields can be found in the [CRD
       Docs](https://marketplace.upbound.io/providers/crossplane-contrib/provider-sonarqube/latest/crds).
+
+      For setup and contribution guidance, see the repository
+      [README](https://github.com/crossplane-contrib/provider-sonarqube/blob/main/README.md)
+      and [CONTRIBUTING](https://github.com/crossplane-contrib/provider-sonarqube/blob/main/CONTRIBUTING.md).
+
+      For release notes and additional docs, see the package extensions
+      on the Upbound Marketplace version page.
 
       If you encounter an issue please reach out on
       [slack.crossplane.io](https://slack.crossplane.io) and create an issue in
