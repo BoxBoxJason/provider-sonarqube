@@ -303,6 +303,11 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if updateOptions.NewKey != "" {
 		// If the Key was updated, also update the external name to the new Key to keep it in sync with the identifier of the ALMGitLab resource in SonarQube API.
 		meta.SetExternalName(almGitlab, updateOptions.NewKey)
+
+		kubeErr := c.kubeClient.Update(ctx, almGitlab)
+		if kubeErr != nil {
+			return managed.ExternalUpdate{}, errors.Wrap(kubeErr, "cannot update external name annotation after key change")
+		}
 	}
 
 	return managed.ExternalUpdate{
@@ -343,7 +348,7 @@ func (c *external) Disconnect(ctx context.Context) error {
 	return nil
 }
 
-// getSavedAPIToken retrieves the saved API token from the connection secret referenced in the ALMGitLab resource's spec. It returns an empty string if the reference is not set or if there is an error retrieving the token.
+// getSavedAPIToken retrieves the saved API token from the connection secret.
 func (c *external) getSavedAPIToken(ctx context.Context, almGitlab *v1alpha1.ALMGitLab) (string, error) {
 	ref := almGitlab.GetWriteConnectionSecretToReference()
 	if ref == nil || ref.Name == "" {

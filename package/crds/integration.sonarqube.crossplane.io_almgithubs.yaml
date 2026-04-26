@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: almgitlabs.integration.sonarqube.crossplane.io
+  name: almgithubs.integration.sonarqube.crossplane.io
 spec:
   group: integration.sonarqube.crossplane.io
   names:
@@ -12,10 +12,10 @@ spec:
     - crossplane
     - managed
     - sonarqube
-    kind: ALMGitLab
-    listKind: ALMGitLabList
-    plural: almgitlabs
-    singular: almgitlab
+    kind: ALMGitHub
+    listKind: ALMGitHubList
+    plural: almgithubs
+    singular: almgithub
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -34,8 +34,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: An ALMGitLab is a managed resource that represents a SonarQube
-          ALM integration for GitLab.
+        description: A ALMGitHub is a managed resource that represents a SonarQube
+          ALM integration for GitHub.
         properties:
           apiVersion:
             description: |-
@@ -55,21 +55,43 @@ spec:
           metadata:
             type: object
           spec:
-            description: A ALMGitLabSpec defines the desired state of a ALMGitLab.
+            description: A ALMGitHubSpec defines the desired state of a ALMGitHub.
             properties:
               forProvider:
-                description: ALMGitLabParameters are the configurable fields of a
-                  ALMGitLab.
+                description: ALMGitHubParameters are the configurable fields of a
+                  ALMGitHub.
                 properties:
+                  appId:
+                    description: AppID is the GitHub App ID.
+                    maxLength: 80
+                    minLength: 1
+                    type: string
+                  clientId:
+                    description: ClientID is the GitHub App Client ID.
+                    maxLength: 80
+                    minLength: 1
+                    type: string
+                  clientSecretRef:
+                    description: ClientSecretRef references a Secret containing the
+                      GitHub App Client Secret.
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
                   key:
                     description: Key is the unique identifier for the ALM integration
                       in SonarQube.
                     minLength: 1
                     type: string
-                  personalAccessTokenSecretRef:
-                    description: PersonalAccessTokenSecretRef references a Secret
-                      containing the personal access token to authenticate with the
-                      ALM system.
+                  privateKeyRef:
+                    description: PrivateKeyRef references a Secret containing the
+                      GitHub App Private Key.
                     properties:
                       key:
                         type: string
@@ -81,14 +103,29 @@ spec:
                     - name
                     type: object
                   url:
-                    description: URL is the URL of the ALM system API to integrate
-                      with SonarQube.
+                    description: URL is the GitHub API URL.
                     format: uri
                     minLength: 1
                     type: string
+                  webhookSecretRef:
+                    description: WebhookSecretRef references a Secret containing the
+                      GitHub App Webhook Secret.
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
                 required:
+                - appId
+                - clientId
+                - clientSecretRef
                 - key
-                - personalAccessTokenSecretRef
+                - privateKeyRef
                 - url
                 type: object
               managementPolicies:
@@ -154,11 +191,19 @@ spec:
               rule: has(self.writeConnectionSecretToRef) && size(self.writeConnectionSecretToRef.name)
                 > 0
           status:
-            description: A ALMGitLabStatus represents the observed state of a ALMGitLab.
+            description: A ALMGitHubStatus represents the observed state of a ALMGitHub.
             properties:
               atProvider:
-                description: ALMGitLabObservation are the observable fields of a ALMGitLab.
+                description: ALMGitHubObservation are the observable fields of a ALMGitHub.
                 properties:
+                  appId:
+                    description: AppID is the GitHub App ID as observed from the SonarQube
+                      API.
+                    type: string
+                  clientId:
+                    description: ClientID is the GitHub App Client ID as observed
+                      from the SonarQube API.
+                    type: string
                   key:
                     description: Key is the unique identifier for the ALM integration
                       in SonarQube.

@@ -33,6 +33,11 @@ import (
 // https://github.com/golang/go/wiki/TestComments
 // https://github.com/crossplane/crossplane/blob/master/CONTRIBUTING.md#contributing-code
 
+const (
+	gitlabALMName = "gitlab-main"
+	gitlabALMURL  = "https://gitlab.example.com"
+)
+
 // TestLateInitializeALMGitLab tests the LateInitializeALMGitLab function.
 func TestLateInitializeALMGitLab(t *testing.T) {
 	t.Parallel()
@@ -51,15 +56,15 @@ func TestLateInitializeALMGitLab(t *testing.T) {
 		t.Parallel()
 
 		spec := &v1alpha1.ALMGitLabParameters{
-			ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: "gitlab-main"},
+			ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: gitlabALMName},
 		}
 		obs := &v1alpha1.ALMGitLabObservation{
-			ALMCommonObservation: v1alpha1.ALMCommonObservation{URL: "https://gitlab.example.com", Key: "gitlab-main"},
+			ALMCommonObservation: v1alpha1.ALMCommonObservation{URL: gitlabALMURL, Key: gitlabALMName},
 		}
 
 		LateInitializeALMGitLab(spec, obs)
 
-		if spec.URL != "https://gitlab.example.com" || spec.Key != "gitlab-main" {
+		if spec.URL != gitlabALMURL || spec.Key != gitlabALMName {
 			t.Fatalf("LateInitializeALMGitLab() mutated spec unexpectedly: %+v", spec)
 		}
 	})
@@ -86,19 +91,19 @@ func TestIsALMGitLabLateInitialized(t *testing.T) {
 		},
 		"NoChanges": {
 			former: &v1alpha1.ALMGitLabParameters{
-				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: "gitlab-main"},
+				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: gitlabALMName},
 			},
 			current: &v1alpha1.ALMGitLabParameters{
-				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: "gitlab-main"},
+				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: gitlabALMName},
 			},
 			want: false,
 		},
 		"ChangedFields": {
 			former: &v1alpha1.ALMGitLabParameters{
-				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: "gitlab-main"},
+				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: gitlabALMName},
 			},
 			current: &v1alpha1.ALMGitLabParameters{
-				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab-alt.example.com", Key: "gitlab-main"},
+				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab-alt.example.com", Key: gitlabALMName},
 			},
 			want: true,
 		},
@@ -119,8 +124,8 @@ func TestIsALMGitLabLateInitialized(t *testing.T) {
 func TestIsALMGitLabUpToDate(t *testing.T) {
 	t.Parallel()
 
-	spec := &v1alpha1.ALMGitLabParameters{ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: "gitlab-main"}}
-	obs := &v1alpha1.ALMGitLabObservation{ALMCommonObservation: v1alpha1.ALMCommonObservation{URL: "https://gitlab.example.com", Key: "gitlab-main"}}
+	spec := &v1alpha1.ALMGitLabParameters{ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: gitlabALMName}}
+	obs := &v1alpha1.ALMGitLabObservation{ALMCommonObservation: v1alpha1.ALMCommonObservation{URL: gitlabALMURL, Key: gitlabALMName}}
 
 	cases := map[string]struct {
 		spec          *v1alpha1.ALMGitLabParameters
@@ -160,7 +165,7 @@ func TestIsALMGitLabUpToDate(t *testing.T) {
 		"KeyChanged": {
 			spec:          spec,
 			specAPIToken:  "token",
-			observation:   &v1alpha1.ALMGitLabObservation{ALMCommonObservation: v1alpha1.ALMCommonObservation{URL: "https://gitlab.example.com", Key: "other"}},
+			observation:   &v1alpha1.ALMGitLabObservation{ALMCommonObservation: v1alpha1.ALMCommonObservation{URL: gitlabALMURL, Key: "other"}},
 			savedAPIToken: "token",
 			want:          false,
 		},
@@ -181,7 +186,7 @@ func TestGenerateALMGitLabCreateOptions(t *testing.T) {
 	t.Parallel()
 
 	spec := &v1alpha1.ALMGitLabParameters{
-		ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: "gitlab-main"},
+		ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: gitlabALMName},
 	}
 
 	got := GenerateALMGitLabCreateOptions(spec, "pat-token")
@@ -189,7 +194,7 @@ func TestGenerateALMGitLabCreateOptions(t *testing.T) {
 		t.Fatal("GenerateALMGitLabCreateOptions() returned nil")
 	}
 
-	if got.URL != "https://gitlab.example.com" || got.Key != "gitlab-main" || got.PersonalAccessToken != "pat-token" {
+	if got.URL != gitlabALMURL || got.Key != gitlabALMName || got.PersonalAccessToken != "pat-token" {
 		t.Fatalf("GenerateALMGitLabCreateOptions() unexpected options: %+v", got)
 	}
 }
@@ -203,12 +208,12 @@ func TestGenerateALMGitLabUpdateOptions(t *testing.T) {
 		wantNewKey string
 	}{
 		"KeyUnchanged": {
-			currentKey: "gitlab-main",
-			specKey:    "gitlab-main",
+			currentKey: gitlabALMName,
+			specKey:    gitlabALMName,
 			wantNewKey: "",
 		},
 		"KeyChanged": {
-			currentKey: "gitlab-main",
+			currentKey: gitlabALMName,
 			specKey:    "gitlab-renamed",
 			wantNewKey: "gitlab-renamed",
 		},
@@ -219,7 +224,7 @@ func TestGenerateALMGitLabUpdateOptions(t *testing.T) {
 			t.Parallel()
 
 			spec := &v1alpha1.ALMGitLabParameters{
-				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: tc.specKey},
+				ALMCommonParameters: v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: tc.specKey},
 			}
 
 			got := GenerateALMGitLabUpdateOptions(tc.currentKey, spec, "pat-token")
@@ -227,11 +232,93 @@ func TestGenerateALMGitLabUpdateOptions(t *testing.T) {
 				t.Fatal("GenerateALMGitLabUpdateOptions() returned nil")
 			}
 
-			if got.URL != "https://gitlab.example.com" || got.Key != tc.currentKey || got.PersonalAccessToken != "pat-token" || got.NewKey != tc.wantNewKey {
+			if got.URL != gitlabALMURL || got.Key != tc.currentKey || got.PersonalAccessToken != "pat-token" || got.NewKey != tc.wantNewKey {
 				t.Fatalf("GenerateALMGitLabUpdateOptions() unexpected options: %+v", got)
 			}
 		})
 	}
+}
+
+func TestFindGitLabALMDefinitionByKey(t *testing.T) {
+	t.Parallel()
+
+	t.Run("NilDefinitions", func(t *testing.T) {
+		t.Parallel()
+
+		if got := FindGitLabALMDefinitionByKey(nil, gitlabALMName); got != nil {
+			t.Fatalf("FindGitLabALMDefinitionByKey(nil) = %+v, want nil", got)
+		}
+	})
+
+	t.Run("EmptySlice", func(t *testing.T) {
+		t.Parallel()
+
+		if got := FindGitLabALMDefinitionByKey(&[]sonar.GitlabDefinition{}, gitlabALMName); got != nil {
+			t.Fatalf("FindGitLabALMDefinitionByKey(empty) = %+v, want nil", got)
+		}
+	})
+
+	t.Run("KeyNotFound", func(t *testing.T) {
+		t.Parallel()
+
+		defs := &[]sonar.GitlabDefinition{{Key: "other", URL: "https://other.com"}}
+		if got := FindGitLabALMDefinitionByKey(defs, gitlabALMName); got != nil {
+			t.Fatalf("FindGitLabALMDefinitionByKey() = %+v, want nil", got)
+		}
+	})
+
+	t.Run("KeyFoundReturnsPointerToSliceElement", func(t *testing.T) {
+		t.Parallel()
+
+		// The returned pointer must reference the original slice element, not a local copy.
+		// Mutate via the returned pointer and verify the slice element was updated.
+		defs := &[]sonar.GitlabDefinition{
+			{Key: "other", URL: "https://other.com"},
+			{Key: gitlabALMName, URL: gitlabALMURL},
+		}
+
+		got := FindGitLabALMDefinitionByKey(defs, gitlabALMName)
+		if got == nil {
+			t.Fatal("FindGitLabALMDefinitionByKey() = nil, want non-nil")
+		}
+
+		if got.Key != gitlabALMName {
+			t.Fatalf("FindGitLabALMDefinitionByKey() key = %q, want %q", got.Key, gitlabALMName)
+		}
+
+		// Mutate via the returned pointer; the slice element must reflect the change.
+		got.URL = "https://mutated.example.com"
+		if (*defs)[1].URL != "https://mutated.example.com" {
+			t.Fatal("FindGitLabALMDefinitionByKey() returned a copy, not a pointer to the slice element")
+		}
+	})
+}
+
+func TestGenerateALMGitLabObservation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("NilDefinition", func(t *testing.T) {
+		t.Parallel()
+
+		got := GenerateALMGitLabObservation(nil)
+		if got.Key != "" || got.URL != "" {
+			t.Fatalf("GenerateALMGitLabObservation(nil) = %+v, want zero value", got)
+		}
+	})
+
+	t.Run("ValidDefinition", func(t *testing.T) {
+		t.Parallel()
+
+		def := &sonar.GitlabDefinition{
+			Key: gitlabALMName,
+			URL: gitlabALMURL,
+		}
+
+		got := GenerateALMGitLabObservation(def)
+		if got.Key != gitlabALMName || got.URL != gitlabALMURL {
+			t.Fatalf("GenerateALMGitLabObservation() = %+v, unexpected values", got)
+		}
+	})
 }
 
 func TestGitLabClientConstructors(t *testing.T) {

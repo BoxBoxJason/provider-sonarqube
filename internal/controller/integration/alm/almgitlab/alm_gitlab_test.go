@@ -52,8 +52,9 @@ import (
 // https://github.com/crossplane/crossplane/blob/master/CONTRIBUTING.md#contributing-code
 
 const (
-	testExternalName = "gitlab-main"
-	testGitLabURL    = "https://gitlab.example.com"
+	testExternalName     = "gitlab-main"
+	testRenamedGitLabKey = "gitlab-renamed"
+	testGitLabURL        = "https://gitlab.example.com"
 )
 
 type notALMGitLab struct {
@@ -252,6 +253,24 @@ func TestObserve(t *testing.T) {
 			}()},
 			want: want{observation: managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: false, ResourceLateInitialized: false, ConnectionDetails: managed.ConnectionDetails{}}},
 		},
+		"NoConnectionSecretRefTriggersUpdate": {
+			// When writeConnectionSecretToRef is not set (bypassing CRD validation), the
+			// controller cannot compare stored vs current secret values and treats the
+			// resource as out-of-date so the next Update re-writes the connection secret.
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			settingsClient: &fake.MockALMSettingsGitLabClient{ListDefinitionsFn: func() (*sonar.AlmSettingsListDefinitions, *http.Response, error) {
+				return &sonar.AlmSettingsListDefinitions{Gitlab: []sonar.GitlabDefinition{{Key: testExternalName, URL: testGitLabURL}}}, mockHTTPResponse(http.StatusOK), nil
+			}},
+			args: args{ctx: context.Background(), mg: func() resource.Managed {
+				alm := newTestALMGitLab(testExternalName, tokenRef)
+				// No SetWriteConnectionSecretToReference → saved token is empty string.
+				alm.Status.AtProvider.Key = testExternalName
+				alm.Status.AtProvider.URL = testGitLabURL
+
+				return alm
+			}()},
+			want: want{observation: managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: false, ResourceLateInitialized: false, ConnectionDetails: managed.ConnectionDetails{}}},
+		},
 	}
 
 	for name, tc := range cases {
@@ -390,7 +409,7 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func TestUpdate(t *testing.T) {
+func TestUpdate(t *testing.T) { //nolint:gocognit // table-driven test covers all update paths
 	t.Parallel()
 
 	tokenRef := &xpv1.LocalSecretKeySelector{LocalSecretReference: xpv1.LocalSecretReference{Name: "pat-secret"}, Key: "token"}
@@ -410,6 +429,7 @@ func TestUpdate(t *testing.T) {
 		settingsClient *fake.MockALMSettingsGitLabClient
 		args           args
 		want           want
+		registerMG     bool // pre-register tc.args.mg with the fake kube client (needed for kubeClient.Update after key change)
 	}{
 		"NotALMGitLab": {
 			objects:        []runtime.Object{},
@@ -463,7 +483,7 @@ func TestUpdate(t *testing.T) {
 			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				UpdateGitlabFn: func(opt *sonar.AlmSettingsUpdateGitlabOptions) (*http.Response, error) {
-					if opt == nil || opt.Key != testExternalName || opt.NewKey != "gitlab-renamed" {
+					if opt == nil || opt.Key != testExternalName || opt.NewKey != testRenamedGitLabKey {
 						t.Fatalf("Update() unexpected options: %+v", opt)
 					}
 
@@ -472,11 +492,28 @@ func TestUpdate(t *testing.T) {
 			},
 			args: args{ctx: context.Background(), mg: func() resource.Managed {
 				alm := newTestALMGitLab(testExternalName, tokenRef)
-				alm.Spec.ForProvider.Key = "gitlab-renamed"
+				alm.Spec.ForProvider.Key = testRenamedGitLabKey
 
 				return alm
 			}()},
-			want: want{update: managed.ExternalUpdate{ConnectionDetails: managed.ConnectionDetails{connectionDetailTokenKey: []byte("pat-value")}}},
+			want:       want{update: managed.ExternalUpdate{ConnectionDetails: managed.ConnectionDetails{connectionDetailTokenKey: []byte("pat-value")}}},
+			registerMG: true,
+		},
+		"UpdateKeyChangePersistError": {
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			settingsClient: &fake.MockALMSettingsGitLabClient{
+				UpdateGitlabFn: func(_ *sonar.AlmSettingsUpdateGitlabOptions) (*http.Response, error) {
+					return mockHTTPResponse(http.StatusOK), nil
+				},
+			},
+			// registerMG is false → ALMGitLab not in fake client → kubeClient.Update returns not-found
+			args: args{ctx: context.Background(), mg: func() resource.Managed {
+				alm := newTestALMGitLab(testExternalName, tokenRef)
+				alm.Spec.ForProvider.Key = testRenamedGitLabKey
+
+				return alm
+			}()},
+			want: want{update: managed.ExternalUpdate{}, errSubstr: "cannot update external name annotation after key change"},
 		},
 	}
 
@@ -486,12 +523,25 @@ func TestUpdate(t *testing.T) {
 
 			scheme := runtime.NewScheme()
 
-			err := corev1.SchemeBuilder.AddToScheme(scheme)
-			if err != nil {
-				t.Fatalf("AddToScheme() unexpected error: %v", err)
+			addCorev1Err := corev1.SchemeBuilder.AddToScheme(scheme)
+			if addCorev1Err != nil {
+				t.Fatalf("AddToScheme(corev1) unexpected error: %v", addCorev1Err)
 			}
 
-			kubeClient := fakekube.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tc.objects...).Build()
+			addV1alpha1Err := v1alpha1.SchemeBuilder.AddToScheme(scheme)
+			if addV1alpha1Err != nil {
+				t.Fatalf("AddToScheme(v1alpha1) unexpected error: %v", addV1alpha1Err)
+			}
+
+			builder := fakekube.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tc.objects...)
+
+			if tc.registerMG {
+				if alm, ok := tc.args.mg.(*v1alpha1.ALMGitLab); ok {
+					builder = builder.WithRuntimeObjects(alm)
+				}
+			}
+
+			kubeClient := builder.Build()
 			e := &external{
 				kubeClient:         kubeClient,
 				integrationsClient: &fake.MockALMIntegrationsGitLabClient{},
@@ -509,10 +559,21 @@ func TestUpdate(t *testing.T) {
 				t.Fatalf("Update() mismatch (-want +got):\n%s", diff)
 			}
 
-			alm, ok := tc.args.mg.(*v1alpha1.ALMGitLab)
-			if ok && name == "SuccessfulUpdateWithKeyChange" {
-				if gotExternalName := meta.GetExternalName(alm); gotExternalName != "gitlab-renamed" {
-					t.Fatalf("Update() external name = %q, want %q", gotExternalName, "gitlab-renamed")
+			if alm, ok := tc.args.mg.(*v1alpha1.ALMGitLab); ok && name == "SuccessfulUpdateWithKeyChange" {
+				if gotExternalName := meta.GetExternalName(alm); gotExternalName != testRenamedGitLabKey {
+					t.Fatalf("Update() external name = %q, want %q", gotExternalName, testRenamedGitLabKey)
+				}
+
+				// Verify the external name was persisted to the Kubernetes API.
+				persisted := &v1alpha1.ALMGitLab{}
+
+				getErr := kubeClient.Get(tc.args.ctx, types.NamespacedName{Name: alm.Name, Namespace: alm.Namespace}, persisted)
+				if getErr != nil {
+					t.Fatalf("Update() kubeClient.Get() error: %v", getErr)
+				}
+
+				if gotPersistedName := meta.GetExternalName(persisted); gotPersistedName != testRenamedGitLabKey {
+					t.Fatalf("Update() persisted external name = %q, want %q", gotPersistedName, testRenamedGitLabKey)
 				}
 			}
 		})
