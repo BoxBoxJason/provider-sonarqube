@@ -30,21 +30,23 @@ import (
 const (
 	// ErrSecretNotFound is the error string used when a secret cannot be found.
 	ErrSecretNotFound = "Cannot find referenced secret"
-	// ErrSecretKeyNotFound is the error string used when a key in a secret cannot be found.
+	// ErrSecretKeyNotFound is the error string used when a key in a secret cannot
+	// be found.
 	ErrSecretKeyNotFound = "Cannot find key in referenced secret"
-	// ErrSecretSelectorNil is the error string used when a secret selector is nil.
+	// ErrSecretSelectorNil is the error string used when a secret selector
+	// is nil.
 	ErrSecretSelectorNil = "Secret selector is nil"
 )
 
 // GetTokenValueFromSecret retrieves the token value from the referenced secret.
-func GetTokenValueFromSecret(ctx context.Context, client client.Client, m resource.Managed, selector *xpv1.SecretKeySelector) (*string, error) {
+func GetTokenValueFromSecret(ctx context.Context, kubeClient client.Client, m resource.Managed, selector *xpv1.SecretKeySelector) (*string, error) {
 	if selector == nil {
 		return nil, errors.Errorf(ErrSecretSelectorNil)
 	}
 
 	secret := &corev1.Secret{}
 
-	err := client.Get(ctx, types.NamespacedName{Name: selector.Name, Namespace: selector.Namespace}, secret)
+	err := kubeClient.Get(ctx, types.NamespacedName{Name: selector.Name, Namespace: selector.Namespace}, secret)
 	if err != nil {
 		return nil, errors.Wrap(err, ErrSecretNotFound)
 	}
@@ -59,13 +61,14 @@ func GetTokenValueFromSecret(ctx context.Context, client client.Client, m resour
 	return &data, nil
 }
 
-// GetTokenValueFromLocalSecret retrieves the token value from a local secret in the same namespace as the managed resource.
-func GetTokenValueFromLocalSecret(ctx context.Context, client client.Client, managedResource resource.Managed, localSelector *xpv1.LocalSecretKeySelector) (*string, error) {
+// GetTokenValueFromLocalSecret retrieves the token value from a local secret
+// in the same namespace as the managed resource.
+func GetTokenValueFromLocalSecret(ctx context.Context, kubeClient client.Client, managedResource resource.Managed, localSelector *xpv1.LocalSecretKeySelector) (*string, error) {
 	if localSelector == nil {
 		return nil, errors.Errorf(ErrSecretSelectorNil)
 	}
 
-	return GetTokenValueFromSecret(ctx, client, managedResource, &xpv1.SecretKeySelector{
+	return GetTokenValueFromSecret(ctx, kubeClient, managedResource, &xpv1.SecretKeySelector{
 		Key: localSelector.Key,
 		SecretReference: xpv1.SecretReference{
 			Name:      localSelector.Name,
@@ -74,13 +77,14 @@ func GetTokenValueFromLocalSecret(ctx context.Context, client client.Client, man
 	})
 }
 
-// GetTokenValueFromLocalSecretReference retrieves the token value from a local secret in the same namespace as the managed resource.
-func GetTokenValueFromLocalSecretReference(ctx context.Context, client client.Client, managedResource resource.Managed, localSelector *xpv1.LocalSecretReference, key string) (*string, error) {
+// GetTokenValueFromLocalSecretReference retrieves the token value from a
+// local secret in the same namespace as the managed resource.
+func GetTokenValueFromLocalSecretReference(ctx context.Context, kubeClient client.Client, managedResource resource.Managed, localSelector *xpv1.LocalSecretReference, key string) (*string, error) {
 	if localSelector == nil {
 		return nil, errors.Errorf(ErrSecretSelectorNil)
 	}
 
-	return GetTokenValueFromSecret(ctx, client, managedResource, &xpv1.SecretKeySelector{
+	return GetTokenValueFromSecret(ctx, kubeClient, managedResource, &xpv1.SecretKeySelector{
 		Key: key,
 		SecretReference: xpv1.SecretReference{
 			Name:      localSelector.Name,

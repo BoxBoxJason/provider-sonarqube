@@ -34,17 +34,19 @@ import (
 	"github.com/crossplane/provider-sonarqube/internal/fake"
 )
 
+// permissionsTemplateTestID is a test permissions template ID.
 const permissionsTemplateTestID = "template-id"
 
+// TestObserve tests the Observe method.
 func TestObserve(t *testing.T) {
 	t.Parallel()
 
 	baseTemplate := func() *v1alpha1.PermissionsTemplate {
 		return withExternalName(&v1alpha1.PermissionsTemplate{
-			ObjectMeta: metav1.ObjectMeta{Name: "template-a"},
+			ObjectMeta: metav1.ObjectMeta{Name: templateNameA},
 			Spec: v1alpha1.PermissionsTemplateSpec{
 				ForProvider: v1alpha1.PermissionsTemplateParameters{
-					Name:               "template-a",
+					Name:               templateNameA,
 					Description:        ptr.To("desc"),
 					ProjectKeyPattern:  ptr.To("proj-.*"),
 					Default:            ptr.To(false),
@@ -86,7 +88,7 @@ func TestObserve(t *testing.T) {
 		"MissingExternalNameReturnsNotExists": {
 			client: &fake.MockPermissionsTemplatesClient{},
 			mg: &v1alpha1.PermissionsTemplate{
-				ObjectMeta: metav1.ObjectMeta{Name: "template-a"},
+				ObjectMeta: metav1.ObjectMeta{Name: templateNameA},
 			},
 			want: managed.ExternalObservation{ResourceExists: false},
 		},
@@ -96,7 +98,7 @@ func TestObserve(t *testing.T) {
 					return nil, mockHTTPResponse(), errors.New("search failed")
 				},
 			},
-			mg:      withExternalName(newPermissionsTemplate("template-a"), "template-a"),
+			mg:      withExternalName(newPermissionsTemplate(templateNameA), templateNameA),
 			want:    managed.ExternalObservation{},
 			wantErr: "failed to observe PermissionsTemplate",
 		},
@@ -106,7 +108,7 @@ func TestObserve(t *testing.T) {
 					return &sonar.PermissionsSearchTemplates{PermissionTemplates: []sonar.PermissionTemplate{}}, mockHTTPResponse(), nil
 				},
 			},
-			mg:   withExternalName(newPermissionsTemplate("template-a"), "template-a"),
+			mg:   withExternalName(newPermissionsTemplate(templateNameA), templateNameA),
 			want: managed.ExternalObservation{ResourceExists: false},
 		},
 		"SuccessfulObserveWithoutLateInit": {
@@ -115,7 +117,7 @@ func TestObserve(t *testing.T) {
 					return &sonar.PermissionsSearchTemplates{
 						PermissionTemplates: []sonar.PermissionTemplate{{
 							ID:                "template-id",
-							Name:              "template-a",
+							Name:              templateNameA,
 							Description:       "desc",
 							ProjectKeyPattern: "proj-.*",
 							Permissions:       []sonar.TemplatePermission{{Key: "scan", WithProjectCreator: true}},
@@ -192,7 +194,7 @@ func TestObserve(t *testing.T) {
 			client: &fake.MockPermissionsTemplatesClient{
 				SearchFn: func(opt *sonar.PermissionsSearchTemplatesOptions) (*sonar.PermissionsSearchTemplates, *http.Response, error) {
 					return &sonar.PermissionsSearchTemplates{
-						PermissionTemplates: []sonar.PermissionTemplate{{ID: "template-id", Name: "template-a"}},
+						PermissionTemplates: []sonar.PermissionTemplate{{ID: "template-id", Name: templateNameA}},
 					}, mockHTTPResponse(), nil
 				},
 				TemplateGroupsFn: func(opt *sonar.PermissionsTemplateGroupsOptions) (*sonar.PermissionsTemplateGroups, *http.Response, error) {
@@ -202,7 +204,7 @@ func TestObserve(t *testing.T) {
 					return &sonar.PermissionsTemplateUsers{Users: []sonar.TemplateUser{}}, mockHTTPResponse(), nil
 				},
 			},
-			mg:      withExternalName(newPermissionsTemplate("template-a"), "template-id"),
+			mg:      withExternalName(newPermissionsTemplate(templateNameA), "template-id"),
 			want:    managed.ExternalObservation{},
 			wantErr: "failed to observe PermissionsTemplate permissions",
 		},
@@ -230,6 +232,7 @@ func TestObserve(t *testing.T) {
 	}
 }
 
+// TestObserveLateInitializesDefault tests Observe late initializes default.
 func TestObserveLateInitializesDefault(t *testing.T) {
 	t.Parallel()
 
@@ -274,6 +277,7 @@ func TestObserveLateInitializesDefault(t *testing.T) {
 	}
 }
 
+// TestGetTemplateSearchString tests the getTemplateSearchString function.
 func TestGetTemplateSearchString(t *testing.T) {
 	t.Parallel()
 
@@ -297,10 +301,12 @@ func TestGetTemplateSearchString(t *testing.T) {
 	}
 }
 
+// TestObserveReturnsExistsWhenExternalNameIsTemplateID tests Observe
+// returns exists when external name is template ID.
 func TestObserveReturnsExistsWhenExternalNameIsTemplateID(t *testing.T) {
 	t.Parallel()
 
-	template := withExternalName(newPermissionsTemplate("template-a"), permissionsTemplateTestID)
+	template := withExternalName(newPermissionsTemplate(templateNameA), permissionsTemplateTestID)
 	searchCalls := 0
 
 	e := &external{client: &fake.MockPermissionsTemplatesClient{
@@ -311,7 +317,7 @@ func TestObserveReturnsExistsWhenExternalNameIsTemplateID(t *testing.T) {
 				t.Fatalf("SearchFn query = %q, want empty query", opt.Query)
 			}
 
-			return &sonar.PermissionsSearchTemplates{PermissionTemplates: []sonar.PermissionTemplate{{ID: permissionsTemplateTestID, Name: "template-a"}}}, mockHTTPResponse(), nil
+			return &sonar.PermissionsSearchTemplates{PermissionTemplates: []sonar.PermissionTemplate{{ID: permissionsTemplateTestID, Name: templateNameA}}}, mockHTTPResponse(), nil
 		},
 		TemplateGroupsFn: func(opt *sonar.PermissionsTemplateGroupsOptions) (*sonar.PermissionsTemplateGroups, *http.Response, error) {
 			return &sonar.PermissionsTemplateGroups{Groups: []sonar.TemplateGroup{}}, mockHTTPResponse(), nil
@@ -335,10 +341,11 @@ func TestObserveReturnsExistsWhenExternalNameIsTemplateID(t *testing.T) {
 	}
 }
 
+// TestFindMatchingTemplate tests the findMatchingTemplate function.
 func TestFindMatchingTemplate(t *testing.T) {
 	t.Parallel()
 
-	templates := []sonar.PermissionTemplate{{ID: permissionsTemplateTestID, Name: "template-a"}, {ID: "template-2", Name: "template-b"}}
+	templates := []sonar.PermissionTemplate{{ID: permissionsTemplateTestID, Name: templateNameA}, {ID: "template-2", Name: "template-b"}}
 	defaultTemplates := map[string]struct{}{permissionsTemplateTestID: {}}
 
 	got, isDefault, found := findMatchingTemplate(templates, defaultTemplates, ptr.To(permissionsTemplateTestID), nil)
@@ -352,6 +359,7 @@ func TestFindMatchingTemplate(t *testing.T) {
 	}
 }
 
+// TestObserveTemplatePermissionsPage tests observeTemplatePermissionsPage.
 func TestObserveTemplatePermissionsPage(t *testing.T) {
 	t.Parallel()
 
@@ -384,6 +392,7 @@ func TestObserveTemplatePermissionsPage(t *testing.T) {
 	}
 }
 
+// TestObservePermissionsTemplate tests observing a PermissionsTemplate.
 func TestObservePermissionsTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -394,7 +403,7 @@ func TestObservePermissionsTemplate(t *testing.T) {
 			}
 
 			if opt.Page == 1 {
-				return &sonar.PermissionsSearchTemplates{PermissionTemplates: []sonar.PermissionTemplate{{ID: permissionsTemplateTestID, Name: "template-a"}}, DefaultTemplates: []sonar.DefaultTemplate{{TemplateID: permissionsTemplateTestID}}}, mockHTTPResponse(), nil
+				return &sonar.PermissionsSearchTemplates{PermissionTemplates: []sonar.PermissionTemplate{{ID: permissionsTemplateTestID, Name: templateNameA}}, DefaultTemplates: []sonar.DefaultTemplate{{TemplateID: permissionsTemplateTestID}}}, mockHTTPResponse(), nil
 			}
 
 			return &sonar.PermissionsSearchTemplates{PermissionTemplates: []sonar.PermissionTemplate{}}, mockHTTPResponse(), nil
@@ -410,17 +419,17 @@ func TestObservePermissionsTemplate(t *testing.T) {
 
 	nameLookupClient := &fake.MockPermissionsTemplatesClient{
 		SearchFn: func(opt *sonar.PermissionsSearchTemplatesOptions) (*sonar.PermissionsSearchTemplates, *http.Response, error) {
-			if opt.Query != "template-a" {
-				t.Fatalf("SearchFn query = %q, want %q", opt.Query, "template-a")
+			if opt.Query != templateNameA {
+				t.Fatalf("SearchFn query = %q, want %q", opt.Query, templateNameA)
 			}
 
-			return &sonar.PermissionsSearchTemplates{PermissionTemplates: []sonar.PermissionTemplate{{ID: permissionsTemplateTestID, Name: "template-a"}}, DefaultTemplates: []sonar.DefaultTemplate{{TemplateID: permissionsTemplateTestID}}}, mockHTTPResponse(), nil
+			return &sonar.PermissionsSearchTemplates{PermissionTemplates: []sonar.PermissionTemplate{{ID: permissionsTemplateTestID, Name: templateNameA}}, DefaultTemplates: []sonar.DefaultTemplate{{TemplateID: permissionsTemplateTestID}}}, mockHTTPResponse(), nil
 		},
 	}
 
 	e = &external{client: nameLookupClient}
 
-	got, isDefault, err = e.observePermissionsTemplate(nil, ptr.To("template-a"))
+	got, isDefault, err = e.observePermissionsTemplate(nil, ptr.To(templateNameA))
 	if err != nil || got.ID != permissionsTemplateTestID || !isDefault {
 		t.Fatalf("observePermissionsTemplate() name-only got=%+v isDefault=%v err=%v", got, isDefault, err)
 	}
@@ -440,6 +449,7 @@ func TestObservePermissionsTemplate(t *testing.T) {
 	}
 }
 
+// TestObserveTemplatePermissionPagination tests permission pagination.
 func TestObserveTemplatePermissionPagination(t *testing.T) {
 	t.Parallel()
 

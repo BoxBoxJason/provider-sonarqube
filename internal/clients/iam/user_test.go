@@ -27,8 +27,18 @@ import (
 	"github.com/crossplane/provider-sonarqube/internal/clients/common"
 )
 
-const testEmail = "alice@example.com"
+const (
+	// testEmail is a test constant for email addresses.
+	testEmail = "alice@example.com"
+	// testSecret is a test constant for secret values.
+	testSecret = "secret"
+	// testUserName is a test constant for user names.
+	testUserName = "Alice"
+	// testUserLogin is a test constant for user logins.
+	testUserLogin = "alice"
+)
 
+// TestNewUsersClient tests creating a new users client.
 func TestNewUsersClient(t *testing.T) {
 	t.Parallel()
 
@@ -43,6 +53,7 @@ func TestNewUsersClient(t *testing.T) {
 	}
 }
 
+// TestLateInitializeUser tests late initialization of user parameters.
 func TestLateInitializeUser(t *testing.T) {
 	t.Parallel()
 
@@ -110,6 +121,7 @@ func TestLateInitializeUser(t *testing.T) {
 	})
 }
 
+// TestIsUserLateInitialized tests checking user late initialization.
 func TestIsUserLateInitialized(t *testing.T) {
 	t.Parallel()
 
@@ -159,6 +171,7 @@ func TestIsUserLateInitialized(t *testing.T) {
 	}
 }
 
+// TestIsUserUpToDate tests checking if user is up to date.
 func TestIsUserUpToDate(t *testing.T) {
 	t.Parallel()
 
@@ -212,6 +225,8 @@ func TestIsUserUpToDate(t *testing.T) {
 	}
 }
 
+// TestAreUserScmAccountsUpToDate tests checking if user SCM
+// accounts are up to date.
 func TestAreUserScmAccountsUpToDate(t *testing.T) {
 	t.Parallel()
 
@@ -228,6 +243,7 @@ func TestAreUserScmAccountsUpToDate(t *testing.T) {
 	}
 }
 
+// TestAreUserGroupsUpToDate tests checking if user groups are up to date.
 func TestAreUserGroupsUpToDate(t *testing.T) {
 	t.Parallel()
 
@@ -247,6 +263,7 @@ func TestAreUserGroupsUpToDate(t *testing.T) {
 	}
 }
 
+// TestGenerateCreateUserOptions tests creating user creation options.
 func TestGenerateCreateUserOptions(t *testing.T) {
 	t.Parallel()
 
@@ -257,7 +274,7 @@ func TestGenerateCreateUserOptions(t *testing.T) {
 	email := testEmail
 	local := true
 	accounts := []string{"github:alice", "gitlab:alice"}
-	password := "secret"
+	password := testSecret
 
 	options := GenerateCreateUserOptions(&v1alpha1.UserParameters{Login: "alice", Name: "Alice", Email: &email, Local: &local, ScmAccounts: &accounts}, &password)
 
@@ -265,7 +282,7 @@ func TestGenerateCreateUserOptions(t *testing.T) {
 		t.Fatal("GenerateCreateUserOptions() returned nil")
 	}
 
-	if options.Login != "alice" || options.Name != "Alice" || options.Password != "secret" {
+	if options.Login != testUserLogin || options.Name != testUserName || options.Password != testSecret {
 		t.Fatalf("GenerateCreateUserOptions() got %+v", options)
 	}
 
@@ -282,6 +299,7 @@ func TestGenerateCreateUserOptions(t *testing.T) {
 	}
 }
 
+// TestGenerateUpdateUserOptions tests creating user update options.
 func TestGenerateUpdateUserOptions(t *testing.T) {
 	t.Parallel()
 
@@ -301,7 +319,7 @@ func TestGenerateUpdateUserOptions(t *testing.T) {
 		t.Fatal("GenerateUpdateUserOptions() returned nil")
 	}
 
-	if options.Login != "alice" || options.Name != "Alice" {
+	if options.Login != testUserLogin || options.Name != "Alice" {
 		t.Fatalf("GenerateUpdateUserOptions() got %+v", options)
 	}
 
@@ -318,6 +336,7 @@ func TestGenerateUpdateUserOptions(t *testing.T) {
 	}
 }
 
+// TestGenerateUserObservation tests generating user observations.
 func TestGenerateUserObservation(t *testing.T) {
 	t.Parallel()
 

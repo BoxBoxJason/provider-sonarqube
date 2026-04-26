@@ -22,11 +22,12 @@ import (
 	v1alpha1 "github.com/crossplane/provider-sonarqube/apis/integration/v1alpha1"
 )
 
+// TestIsALMUpToDate tests the IsALMUpToDate function.
 func TestIsALMUpToDate(t *testing.T) {
 	t.Parallel()
 
-	spec := &v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: "gitlab-main"}
-	obs := &v1alpha1.ALMCommonObservation{URL: "https://gitlab.example.com", Key: "gitlab-main"}
+	spec := &v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: gitlabALMName}
+	obs := &v1alpha1.ALMCommonObservation{URL: gitlabALMURL, Key: gitlabALMName}
 
 	cases := map[string]struct {
 		spec          *v1alpha1.ALMCommonParameters
@@ -59,7 +60,7 @@ func TestIsALMUpToDate(t *testing.T) {
 		"URLChanged": {
 			spec:          spec,
 			specAPIToken:  "token",
-			observation:   &v1alpha1.ALMCommonObservation{URL: "https://other.example.com", Key: "gitlab-main"},
+			observation:   &v1alpha1.ALMCommonObservation{URL: "https://other.example.com", Key: gitlabALMName},
 			savedAPIToken: "token",
 			want:          false,
 		},
@@ -83,6 +84,7 @@ func TestIsALMUpToDate(t *testing.T) {
 	}
 }
 
+// TestLateInitializeALM tests the LateInitializeALM function.
 func TestLateInitializeALM(t *testing.T) {
 	t.Parallel()
 
@@ -90,15 +92,16 @@ func TestLateInitializeALM(t *testing.T) {
 	LateInitializeALM(&v1alpha1.ALMCommonParameters{}, nil)
 	LateInitializeALM(nil, &v1alpha1.ALMCommonObservation{})
 
-	spec := &v1alpha1.ALMCommonParameters{URL: "https://gitlab.example.com", Key: "gitlab-main"}
+	spec := &v1alpha1.ALMCommonParameters{URL: gitlabALMURL, Key: gitlabALMName}
 	obs := &v1alpha1.ALMCommonObservation{URL: "https://other.example.com", Key: "other"}
 	LateInitializeALM(spec, obs)
 
-	if spec.URL != "https://gitlab.example.com" || spec.Key != "gitlab-main" {
+	if spec.URL != gitlabALMURL || spec.Key != gitlabALMName {
 		t.Fatalf("LateInitializeALM() mutated spec unexpectedly: %+v", spec)
 	}
 }
 
+// TestIsALMLateInitialized tests the IsALMLateInitialized function.
 func TestIsALMLateInitialized(t *testing.T) {
 	t.Parallel()
 
@@ -140,6 +143,7 @@ func TestIsALMLateInitialized(t *testing.T) {
 	}
 }
 
+// TestGenerateALMDeleteOptions tests the GenerateALMDeleteOptions function.
 func TestGenerateALMDeleteOptions(t *testing.T) {
 	t.Parallel()
 

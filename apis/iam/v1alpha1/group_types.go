@@ -74,7 +74,11 @@ type GroupStatus struct {
 
 // +kubebuilder:object:root=true
 
-// A Group is the Schema for the Groups API. It represents a Group resource in SonarQube, which is a collection of users that can be assigned permissions to access and manage resources in SonarQube. The Group resource allows you to define and manage groups of users in SonarQube, including their names, descriptions, and permissions.
+// A Group is the Schema for the Groups API. It represents a
+// Group resource in SonarQube, which is a collection of users that can be
+// assigned permissions to access and manage resources in SonarQube.
+// The Group resource allows you to define and manage groups of users in
+// SonarQube, including their names, descriptions, and permissions.
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 // +kubebuilder:printcolumn:name="SYNCED",type="string",JSONPath=".status.conditions[?(@.type=='Synced')].status"
 // +kubebuilder:printcolumn:name="EXTERNAL-NAME",type="string",JSONPath=".metadata.annotations.crossplane\\.io/external-name"
@@ -107,6 +111,7 @@ var (
 	GroupGroupVersionKind = SchemeGroupVersion.WithKind(GroupKind)
 )
 
+// init registers the Group resource with the Scheme.
 func init() {
 	SchemeBuilder.Register(&Group{}, &GroupList{})
 }

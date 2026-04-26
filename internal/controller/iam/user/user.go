@@ -44,16 +44,23 @@ import (
 )
 
 const (
-	errNotUser            = "managed resource is not a User custom resource"
-	errTrackPCUsage       = "cannot track ProviderConfig usage"
-	errGetPC              = "cannot get ProviderConfig"
+	// errNotUser indicates managed resource is not a User.
+	errNotUser = "managed resource is not a User custom resource"
+	// errTrackPCUsage indicates ProviderConfig usage tracking failed.
+	errTrackPCUsage = "cannot track ProviderConfig usage"
+	// errGetPC indicates ProviderConfig retrieval failed.
+	errGetPC = "cannot get ProviderConfig"
+	// errExternalNameNotSet indicates external name is not set.
 	errExternalNameNotSet = "external name is not set for User resource %s"
-	errNoUserID           = "created User has empty ID"
+	// errNoUserID indicates created User has empty ID.
+	errNoUserID = "created User has empty ID"
 
+	// passwordKey is the password key for secrets.
 	passwordKey = "password"
 )
 
-// SetupGated adds a controller that reconciles User managed resources with safe-start support.
+// SetupGated adds a controller that reconciles User managed resources
+// with safe-start support.
 func SetupGated(mgr ctrl.Manager, o controller.Options) error {
 	o.Gate.Register(func() {
 		err := Setup(mgr, o)
@@ -154,8 +161,7 @@ func (c *connector) Connect(ctx context.Context, managedResource resource.Manage
 	}, nil
 }
 
-// An ExternalClient observes, then either creates, updates, or deletes an
-// external resource to ensure it reflects the managed resource's desired state.
+// external implements the ExternalClient interface for User resources.
 type external struct {
 	// kube is used to connect to the Kubernetes API and fetch secrets, such as the password for a local user.
 	kube client.Client
@@ -165,7 +171,8 @@ type external struct {
 	groupsClient iam.GroupsClient
 }
 
-// Create is responsible for creating the external resource based on the desired state of the managed resource.
+// Create is responsible for creating the external resource based on the
+// desired state of the managed resource.
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
 	userResource, ok := mg.(*v1alpha1.User)
 	result := managed.ExternalCreation{}
@@ -203,7 +210,8 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	return result, nil
 }
 
-// Delete is responsible for deleting the external resource when the managed resource is deleted.
+// Delete is responsible for deleting the external resource when the
+// managed resource is deleted.
 func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
 	userResource, ok := mg.(*v1alpha1.User)
 	if !ok {
@@ -231,6 +239,7 @@ func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
+// Disconnect closes the external client connection.
 func (c *external) Disconnect(ctx context.Context) error {
 	return nil
 }

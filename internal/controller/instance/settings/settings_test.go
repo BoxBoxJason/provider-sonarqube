@@ -34,6 +34,15 @@ import (
 	"github.com/crossplane/provider-sonarqube/internal/fake"
 )
 
+const (
+	// settingsTestProjectKey is a test project key.
+	settingsTestProjectKey = "my-project-key"
+	// settingsSonarBaseURLKey is a SonarQube base URL setting key.
+	settingsSonarBaseURLKey = "sonar.core.serverBaseURL"
+	// settingsSonarExclusionsKey is a SonarQube exclusions setting key.
+	settingsSonarExclusionsKey = "sonar.exclusions"
+)
+
 // Unlike many Kubernetes projects Crossplane does not use third party testing
 // libraries, per the common Go test review comments. Crossplane encourages the
 // use of table driven unit tests. The tests of the crossplane-runtime project
@@ -42,6 +51,7 @@ import (
 // https://github.com/golang/go/wiki/TestComments
 // https://github.com/crossplane/crossplane/blob/master/CONTRIBUTING.md#contributing-code
 
+// notSettings is a type for testing non-Settings resources.
 type notSettings struct {
 	resource.Managed
 }
@@ -67,6 +77,8 @@ func errComparer(a, b error) bool {
 	return a.Error() == b.Error()
 }
 
+// TestObserve tests the Observe method.
+//
 //nolint:maintidx // Test function complexity is acceptable for comprehensive table-driven tests
 func TestObserve(t *testing.T) {
 	t.Parallel()
@@ -109,7 +121,7 @@ func TestObserve(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsTestProjectKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -137,7 +149,7 @@ func TestObserve(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -156,7 +168,7 @@ func TestObserve(t *testing.T) {
 					return &sonar.SettingsValues{
 						Settings: []sonar.SettingValue{
 							{
-								Key:   "sonar.core.serverBaseURL",
+								Key:   settingsSonarBaseURLKey,
 								Value: "https://sonarqube.example.com",
 							},
 						},
@@ -172,7 +184,7 @@ func TestObserve(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -209,7 +221,7 @@ func TestObserve(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -242,7 +254,7 @@ func TestObserve(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -264,11 +276,11 @@ func TestObserve(t *testing.T) {
 					return &sonar.SettingsValues{
 						Settings: []sonar.SettingValue{
 							{
-								Key:   "sonar.core.serverBaseURL",
+								Key:   settingsSonarBaseURLKey,
 								Value: "https://sonarqube.example.com",
 							},
 							{
-								Key:    "sonar.exclusions",
+								Key:    settingsSonarExclusionsKey,
 								Values: []string{"**/*.test.js", "**/*.spec.js"},
 							},
 							{
@@ -293,10 +305,10 @@ func TestObserve(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
-								"sonar.exclusions": {
+								settingsSonarExclusionsKey: {
 									Values: ptr.To([]string{"**/*.test.js", "**/*.spec.js"}),
 								},
 								"sonar.issue.enforce.multicriteria": {
@@ -322,8 +334,8 @@ func TestObserve(t *testing.T) {
 			client: &fake.MockSettingsClient{
 				ValuesFn: func(opt *sonar.SettingsValuesOptions) (*sonar.SettingsValues, *http.Response, error) {
 					// Verify component is passed correctly
-					if opt.Component != "my-project-key" {
-						return nil, nil, errors.New("expected component to be 'my-project-key'")
+					if opt.Component != settingsTestProjectKey {
+						return nil, nil, errors.New("expected component to be 'settingsTestProjectKey'")
 					}
 
 					return &sonar.SettingsValues{
@@ -344,7 +356,7 @@ func TestObserve(t *testing.T) {
 					},
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
-							Component: ptr.To("my-project-key"),
+							Component: ptr.To(settingsTestProjectKey),
 							Settings: map[string]v1alpha1.SettingParameters{
 								"sonar.coverage.jacoco.xmlReportPaths": {
 									Value: ptr.To("target/site/jacoco/jacoco.xml"),
@@ -382,6 +394,8 @@ func TestObserve(t *testing.T) {
 	}
 }
 
+// TestCreate tests the Create method.
+//
 //nolint:maintidx // Test function complexity is acceptable for comprehensive table-driven tests
 func TestCreate(t *testing.T) {
 	t.Parallel()
@@ -425,7 +439,7 @@ func TestCreate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -435,13 +449,13 @@ func TestCreate(t *testing.T) {
 			},
 			want: want{
 				o:   managed.ExternalCreation{},
-				err: errors.New("failed to set setting sonar.core.serverBaseURL: api error"),
+				err: errors.New("failed to set setting " + settingsSonarBaseURLKey + ": api error"),
 			},
 		},
 		"SuccessfulCreateSingleSetting": {
 			client: &fake.MockSettingsClient{
 				SetFn: func(opt *sonar.SettingsSetOptions) (*http.Response, error) {
-					if opt.Key != "sonar.core.serverBaseURL" {
+					if opt.Key != settingsSonarBaseURLKey {
 						return nil, errors.New("unexpected key: " + opt.Key)
 					}
 
@@ -459,7 +473,7 @@ func TestCreate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -477,8 +491,8 @@ func TestCreate(t *testing.T) {
 				SetFn: func(opt *sonar.SettingsSetOptions) (*http.Response, error) {
 					// Accept any valid setting key
 					validKeys := map[string]bool{
-						"sonar.core.serverBaseURL": true,
-						"sonar.exclusions":         true,
+						settingsSonarBaseURLKey:    true,
+						settingsSonarExclusionsKey: true,
 					}
 					if !validKeys[opt.Key] {
 						return nil, errors.New("unexpected key: " + opt.Key)
@@ -494,10 +508,10 @@ func TestCreate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
-								"sonar.exclusions": {
+								settingsSonarExclusionsKey: {
 									Values: ptr.To([]string{"**/*.test.js"}),
 								},
 							},
@@ -513,8 +527,8 @@ func TestCreate(t *testing.T) {
 		"CreateWithComponent": {
 			client: &fake.MockSettingsClient{
 				SetFn: func(opt *sonar.SettingsSetOptions) (*http.Response, error) {
-					if opt.Component != "my-project-key" {
-						return nil, errors.New("expected component to be 'my-project-key'")
+					if opt.Component != settingsTestProjectKey {
+						return nil, errors.New("expected component to be 'settingsTestProjectKey'")
 					}
 
 					return mockHTTPResponse(), nil
@@ -526,7 +540,7 @@ func TestCreate(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "test-settings"},
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
-							Component: ptr.To("my-project-key"),
+							Component: ptr.To(settingsTestProjectKey),
 							Settings: map[string]v1alpha1.SettingParameters{
 								"sonar.coverage.jacoco.xmlReportPaths": {
 									Value: ptr.To("target/site/jacoco/jacoco.xml"),
@@ -545,7 +559,7 @@ func TestCreate(t *testing.T) {
 			client: &fake.MockSettingsClient{
 				SetFn: func(opt *sonar.SettingsSetOptions) (*http.Response, error) {
 					// Fail on one specific key
-					if opt.Key == "sonar.exclusions" {
+					if opt.Key == settingsSonarExclusionsKey {
 						return nil, errors.New("api error for exclusions")
 					}
 
@@ -559,10 +573,10 @@ func TestCreate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
-								"sonar.exclusions": {
+								settingsSonarExclusionsKey: {
 									Values: ptr.To([]string{"**/*.test.js"}),
 								},
 							},
@@ -573,7 +587,7 @@ func TestCreate(t *testing.T) {
 			want: want{
 				o: managed.ExternalCreation{},
 				// Error should contain information about the failed setting
-				err: errors.New("failed to set setting sonar.exclusions: api error for exclusions"),
+				err: errors.New("failed to set setting " + settingsSonarExclusionsKey + ": api error for exclusions"),
 			},
 		},
 		"CreateWithFieldValues": {
@@ -633,6 +647,8 @@ func TestCreate(t *testing.T) {
 	}
 }
 
+// TestUpdate tests the Update method.
+//
 //nolint:maintidx // Test function complexity is acceptable for comprehensive table-driven tests
 func TestUpdate(t *testing.T) {
 	t.Parallel()
@@ -666,7 +682,7 @@ func TestUpdate(t *testing.T) {
 		"UpdateOutOfDateSetting": {
 			client: &fake.MockSettingsClient{
 				SetFn: func(opt *sonar.SettingsSetOptions) (*http.Response, error) {
-					if opt.Key != "sonar.core.serverBaseURL" {
+					if opt.Key != settingsSonarBaseURLKey {
 						return nil, errors.New("unexpected key: " + opt.Key)
 					}
 
@@ -684,7 +700,7 @@ func TestUpdate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://new-url.com"),
 								},
 							},
@@ -693,7 +709,7 @@ func TestUpdate(t *testing.T) {
 					Status: v1alpha1.SettingsStatus{
 						AtProvider: v1alpha1.SettingsObservation{
 							Settings: map[string]v1alpha1.SettingObservation{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: "https://old-url.com",
 								},
 							},
@@ -719,7 +735,7 @@ func TestUpdate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -728,7 +744,7 @@ func TestUpdate(t *testing.T) {
 					Status: v1alpha1.SettingsStatus{
 						AtProvider: v1alpha1.SettingsObservation{
 							Settings: map[string]v1alpha1.SettingObservation{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: "https://sonarqube.example.com",
 								},
 							},
@@ -767,7 +783,7 @@ func TestUpdate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -776,7 +792,7 @@ func TestUpdate(t *testing.T) {
 					Status: v1alpha1.SettingsStatus{
 						AtProvider: v1alpha1.SettingsObservation{
 							Settings: map[string]v1alpha1.SettingObservation{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: "https://sonarqube.example.com",
 								},
 								"sonar.obsolete.setting": {
@@ -796,8 +812,8 @@ func TestUpdate(t *testing.T) {
 			client: &fake.MockSettingsClient{
 				SetFn: func(opt *sonar.SettingsSetOptions) (*http.Response, error) {
 					validKeys := map[string]bool{
-						"sonar.core.serverBaseURL": true,
-						"sonar.exclusions":         true,
+						settingsSonarBaseURLKey:    true,
+						settingsSonarExclusionsKey: true,
 					}
 					if !validKeys[opt.Key] {
 						return nil, errors.New("unexpected key: " + opt.Key)
@@ -813,10 +829,10 @@ func TestUpdate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://new-url.com"),
 								},
-								"sonar.exclusions": {
+								settingsSonarExclusionsKey: {
 									Values: ptr.To([]string{"**/*.new.js"}),
 								},
 								"sonar.uptodate.setting": {
@@ -828,10 +844,10 @@ func TestUpdate(t *testing.T) {
 					Status: v1alpha1.SettingsStatus{
 						AtProvider: v1alpha1.SettingsObservation{
 							Settings: map[string]v1alpha1.SettingObservation{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: "https://old-url.com",
 								},
-								"sonar.exclusions": {
+								settingsSonarExclusionsKey: {
 									Values: []string{"**/*.old.js"},
 								},
 								"sonar.uptodate.setting": {
@@ -850,7 +866,7 @@ func TestUpdate(t *testing.T) {
 		"UpdateFailsForOneSetting": {
 			client: &fake.MockSettingsClient{
 				SetFn: func(opt *sonar.SettingsSetOptions) (*http.Response, error) {
-					if opt.Key == "sonar.exclusions" {
+					if opt.Key == settingsSonarExclusionsKey {
 						return nil, errors.New("api error for exclusions")
 					}
 
@@ -864,10 +880,10 @@ func TestUpdate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://new-url.com"),
 								},
-								"sonar.exclusions": {
+								settingsSonarExclusionsKey: {
 									Values: ptr.To([]string{"**/*.new.js"}),
 								},
 							},
@@ -876,10 +892,10 @@ func TestUpdate(t *testing.T) {
 					Status: v1alpha1.SettingsStatus{
 						AtProvider: v1alpha1.SettingsObservation{
 							Settings: map[string]v1alpha1.SettingObservation{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: "https://old-url.com",
 								},
-								"sonar.exclusions": {
+								settingsSonarExclusionsKey: {
 									Values: []string{"**/*.old.js"},
 								},
 							},
@@ -889,7 +905,7 @@ func TestUpdate(t *testing.T) {
 			},
 			want: want{
 				o:   managed.ExternalUpdate{},
-				err: errors.New("failed to update setting sonar.exclusions: api error for exclusions"),
+				err: errors.New("failed to update setting " + settingsSonarExclusionsKey + ": api error for exclusions"),
 			},
 		},
 		"ResetFailsForObsoleteSettings": {
@@ -905,7 +921,7 @@ func TestUpdate(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -914,7 +930,7 @@ func TestUpdate(t *testing.T) {
 					Status: v1alpha1.SettingsStatus{
 						AtProvider: v1alpha1.SettingsObservation{
 							Settings: map[string]v1alpha1.SettingObservation{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: "https://sonarqube.example.com",
 								},
 								"sonar.obsolete.setting": {
@@ -933,8 +949,8 @@ func TestUpdate(t *testing.T) {
 		"UpdateWithComponent": {
 			client: &fake.MockSettingsClient{
 				SetFn: func(opt *sonar.SettingsSetOptions) (*http.Response, error) {
-					if opt.Component != "my-project-key" {
-						return nil, errors.New("expected component to be 'my-project-key'")
+					if opt.Component != settingsTestProjectKey {
+						return nil, errors.New("expected component to be 'settingsTestProjectKey'")
 					}
 
 					return mockHTTPResponse(), nil
@@ -946,7 +962,7 @@ func TestUpdate(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "test-settings"},
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
-							Component: ptr.To("my-project-key"),
+							Component: ptr.To(settingsTestProjectKey),
 							Settings: map[string]v1alpha1.SettingParameters{
 								"sonar.coverage.jacoco.xmlReportPaths": {
 									Value: ptr.To("target/new/jacoco.xml"),
@@ -990,6 +1006,7 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
+// TestDelete tests the Delete method.
 func TestDelete(t *testing.T) {
 	t.Parallel()
 
@@ -1024,8 +1041,8 @@ func TestDelete(t *testing.T) {
 				ResetFn: func(opt *sonar.SettingsResetOptions) (*http.Response, error) {
 					// Verify all settings are being reset
 					expectedKeys := map[string]bool{
-						"sonar.core.serverBaseURL": true,
-						"sonar.exclusions":         true,
+						settingsSonarBaseURLKey:    true,
+						settingsSonarExclusionsKey: true,
 					}
 					if len(opt.Keys) != len(expectedKeys) {
 						return nil, errors.New("expected all settings to be reset")
@@ -1047,10 +1064,10 @@ func TestDelete(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
-								"sonar.exclusions": {
+								settingsSonarExclusionsKey: {
 									Values: ptr.To([]string{"**/*.test.js"}),
 								},
 							},
@@ -1066,8 +1083,8 @@ func TestDelete(t *testing.T) {
 		"DeleteWithComponent": {
 			client: &fake.MockSettingsClient{
 				ResetFn: func(opt *sonar.SettingsResetOptions) (*http.Response, error) {
-					if opt.Component != "my-project-key" {
-						return nil, errors.New("expected component to be 'my-project-key'")
+					if opt.Component != settingsTestProjectKey {
+						return nil, errors.New("expected component to be 'settingsTestProjectKey'")
 					}
 
 					return mockHTTPResponse(), nil
@@ -1079,7 +1096,7 @@ func TestDelete(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "test-settings"},
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
-							Component: ptr.To("my-project-key"),
+							Component: ptr.To(settingsTestProjectKey),
 							Settings: map[string]v1alpha1.SettingParameters{
 								"sonar.coverage.jacoco.xmlReportPaths": {
 									Value: ptr.To("target/site/jacoco/jacoco.xml"),
@@ -1107,7 +1124,7 @@ func TestDelete(t *testing.T) {
 					Spec: v1alpha1.SettingsSpec{
 						ForProvider: v1alpha1.SettingsParameters{
 							Settings: map[string]v1alpha1.SettingParameters{
-								"sonar.core.serverBaseURL": {
+								settingsSonarBaseURLKey: {
 									Value: ptr.To("https://sonarqube.example.com"),
 								},
 							},
@@ -1166,6 +1183,7 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+// TestDisconnect tests the Disconnect method.
 func TestDisconnect(t *testing.T) {
 	t.Parallel()
 

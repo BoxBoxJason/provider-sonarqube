@@ -25,9 +25,11 @@ import (
 	"github.com/crossplane/provider-sonarqube/internal/clients/instance"
 )
 
+// errQualityProfileNotImplemented indicates operation is not implemented.
 var errQualityProfileNotImplemented = errors.New("not implemented")
 
-// MockQualityProfilesClient is a mock implementation of the QualityProfilesClient interface.
+// MockQualityProfilesClient is a mock implementation of the
+// QualityProfilesClient interface.
 type MockQualityProfilesClient struct {
 	ActivateRuleFn    func(opt *sonar.QualityprofilesActivateRuleOptions) (resp *http.Response, err error)
 	ActivateRulesFn   func(opt *sonar.QualityprofilesActivateRulesOptions) (resp *http.Response, err error)

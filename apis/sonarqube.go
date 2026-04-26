@@ -26,8 +26,10 @@ import (
 	sonarqubev1alpha1 "github.com/crossplane/provider-sonarqube/apis/v1alpha1"
 )
 
+// init registers all SonarQube API types with the Scheme.
 func init() {
-	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
+	// Register the types with the Scheme so the components can map objects to
+	// GroupVersionKinds and back
 	AddToSchemes = append(AddToSchemes,
 		sonarqubev1alpha1.SchemeBuilder.AddToScheme,
 		iamv1alpha1.SchemeBuilder.AddToScheme,
@@ -36,7 +38,8 @@ func init() {
 	)
 }
 
-// AddToSchemes may be used to add all resources defined in the project to a Scheme.
+// AddToSchemes may be used to add all resources defined in the project to a
+// Scheme.
 var AddToSchemes runtime.SchemeBuilder
 
 // AddToScheme adds all Resources to the Scheme.

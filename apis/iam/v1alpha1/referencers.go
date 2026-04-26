@@ -26,10 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ResolveReferences parses the references to other custom resources and resolves them to
-// the actual values.
-func (user *User) ResolveReferences(ctx context.Context, client client.Reader) error {
-	resolver := reference.NewAPINamespacedResolver(client, user)
+// ResolveReferences parses the references to other custom resources and
+// resolves them to the actual values.
+func (user *User) ResolveReferences(ctx context.Context, readerClient client.Reader) error {
+	resolver := reference.NewAPINamespacedResolver(readerClient, user)
 
 	if user.Spec.ForProvider.Groups == nil {
 		return nil
@@ -69,10 +69,9 @@ func (user *User) ResolveReferences(ctx context.Context, client client.Reader) e
 			return errors.Errorf("unable to resolve spec.forProvider.groups[%d]: resolved value is empty", groupIdx)
 		}
 
-		group := userGroup
-		group.GroupId = ptr.To(groupResponse.ResolvedValue)
-		group.GroupIdRef = groupResponse.ResolvedReference
-		(*user.Spec.ForProvider.Groups)[groupIdx] = group
+		userGroup.GroupId = ptr.To(groupResponse.ResolvedValue)
+		userGroup.GroupIdRef = groupResponse.ResolvedReference
+		(*user.Spec.ForProvider.Groups)[groupIdx] = userGroup
 	}
 
 	return nil

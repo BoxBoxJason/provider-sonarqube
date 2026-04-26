@@ -46,30 +46,37 @@ import (
 )
 
 const (
-	testUserID    = "user-1"
+	// testUserID is the test user identifier.
+	testUserID = "user-1"
+	// testUserLogin is the test user login name.
 	testUserLogin = "alice"
 )
 
+// notUser is a type for testing non-User resources.
 type notUser struct {
 	resource.Managed
 }
 
+// mockGate is a mock implementation of a gate for testing.
 type mockGate struct {
 	registered bool
 	callback   func()
 	gvks       []schema.GroupVersionKind
 }
 
+// Register registers a callback for a GroupVersionKind.
 func (m *mockGate) Register(callback func(), gvks ...schema.GroupVersionKind) {
 	m.registered = true
 	m.callback = callback
 	m.gvks = append(m.gvks, gvks...)
 }
 
+// Set sets whether a GroupVersionKind is enabled.
 func (m *mockGate) Set(_ schema.GroupVersionKind, _ bool) bool {
 	return false
 }
 
+// newUserWithSpec creates a new User with the given parameters.
 func newUserWithSpec(spec v1alpha1.UserParameters) *v1alpha1.User {
 	return &v1alpha1.User{
 		ObjectMeta: metav1.ObjectMeta{
@@ -80,6 +87,7 @@ func newUserWithSpec(spec v1alpha1.UserParameters) *v1alpha1.User {
 	}
 }
 
+// TestCreate tests the Create method for users.
 func TestCreate(t *testing.T) {
 	t.Parallel()
 
@@ -190,6 +198,7 @@ func TestCreate(t *testing.T) {
 	})
 }
 
+// TestDelete tests the Delete method for users.
 func TestDelete(t *testing.T) {
 	t.Parallel()
 
@@ -240,6 +249,7 @@ func TestDelete(t *testing.T) {
 	})
 }
 
+// TestDeleteHandlesNotFoundAndErrors tests delete error handling.
 func TestDeleteHandlesNotFoundAndErrors(t *testing.T) {
 	t.Parallel()
 
@@ -247,6 +257,7 @@ func TestDeleteHandlesNotFoundAndErrors(t *testing.T) {
 	meta.SetExternalName(user, testUserID)
 
 	_, err := (&external{usersClient: &sonarfake.MockUsersClient{DeactivateFn: func(_ *sonar.UsersDeactivateOptionsV2) (*http.Response, error) {
+		//nolint:nilnil // Intentional: simulating partial HTTP failure.
 		return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(""))}, errors.New("not found")
 	}}}).Delete(context.Background(), user)
 	if err != nil {
@@ -254,6 +265,7 @@ func TestDeleteHandlesNotFoundAndErrors(t *testing.T) {
 	}
 
 	_, err = (&external{usersClient: &sonarfake.MockUsersClient{DeactivateFn: func(_ *sonar.UsersDeactivateOptionsV2) (*http.Response, error) {
+		//nolint:nilnil // Intentional: simulating partial HTTP failure.
 		return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(""))}, errors.New("boom")
 	}}}).Delete(context.Background(), user)
 	if err == nil || !strings.Contains(err.Error(), "cannot delete User") {
@@ -261,6 +273,7 @@ func TestDeleteHandlesNotFoundAndErrors(t *testing.T) {
 	}
 }
 
+// TestSetupGatedCallbackPanicsWithoutManager tests callback behavior.
 func TestSetupGatedCallbackPanicsWithoutManager(t *testing.T) {
 	t.Parallel()
 
@@ -286,6 +299,7 @@ func TestSetupGatedCallbackPanicsWithoutManager(t *testing.T) {
 	gate.callback()
 }
 
+// TestDisconnect tests the Disconnect method.
 func TestDisconnect(t *testing.T) {
 	t.Parallel()
 
@@ -295,6 +309,7 @@ func TestDisconnect(t *testing.T) {
 	}
 }
 
+// TestSetupGatedRegistersUserGVK tests SetupGated registers the user GVK.
 func TestSetupGatedRegistersUserGVK(t *testing.T) {
 	t.Parallel()
 
@@ -320,6 +335,7 @@ func TestSetupGatedRegistersUserGVK(t *testing.T) {
 	}
 }
 
+// TestConnectTypeAssertion tests Connect type assertion error handling.
 func TestConnectTypeAssertion(t *testing.T) {
 	t.Parallel()
 
@@ -329,6 +345,7 @@ func TestConnectTypeAssertion(t *testing.T) {
 	}
 }
 
+// TestConnectGetConfigError tests Connect config retrieval error handling.
 func TestConnectGetConfigError(t *testing.T) {
 	t.Parallel()
 
@@ -363,6 +380,7 @@ func TestConnectGetConfigError(t *testing.T) {
 	}
 }
 
+// TestConnectSuccess tests successful Connect with valid configuration.
 func TestConnectSuccess(t *testing.T) {
 	t.Parallel()
 

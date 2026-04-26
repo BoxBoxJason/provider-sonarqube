@@ -32,6 +32,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/test"
 )
 
+// newTestUser creates a test User resource.
 func newTestUser(namespace string) *User {
 	return &User{
 		ObjectMeta: metav1.ObjectMeta{
@@ -47,15 +48,17 @@ func newTestUser(namespace string) *User {
 	}
 }
 
+// setExtName sets the external name on a Kubernetes object.
 func setExtName(obj metav1.Object, name string) {
 	meta.SetExternalName(obj, name)
 }
 
-//nolint:gocognit // Exhaustive table-driven test intentionally covers many reference-resolution scenarios.
-func TestUserResolveReferences(t *testing.T) {
-	t.Parallel()
+// testNamespace is the test namespace for resources.
+const testNamespace = "default"
 
-	const ns = "default"
+// TestUserResolveReferences tests reference resolution for User resources.
+func TestUserResolveReferences(t *testing.T) { //nolint:gocognit // Exhaustive table-driven test intentionally covers many reference-resolution scenarios.
+	t.Parallel()
 
 	cases := map[string]struct {
 		reason     string
@@ -66,13 +69,13 @@ func TestUserResolveReferences(t *testing.T) {
 	}{
 		"NoGroups_NoOp": {
 			reason: "A user with no groups resolves with no error.",
-			user:   newTestUser(ns),
+			user:   newTestUser(testNamespace),
 			client: test.NewMockClient(),
 		},
 		"GroupIdAlreadySet_NoRefOrSelector_Preserved": {
 			reason: "When GroupId is already set and no ref/selector exists, it is preserved.",
 			user: func() *User {
-				u := newTestUser(ns)
+				u := newTestUser(testNamespace)
 				groups := []UserGroupsParameters{{GroupId: ptr.To("devs")}}
 				u.Spec.ForProvider.Groups = &groups
 
@@ -84,7 +87,7 @@ func TestUserResolveReferences(t *testing.T) {
 		"GroupIdRef_ResolvesToExternalName": {
 			reason: "GroupIdRef.Name is the Kubernetes object name and resolves to the external name.",
 			user: func() *User {
-				u := newTestUser(ns)
+				u := newTestUser(testNamespace)
 				groups := []UserGroupsParameters{{GroupIdRef: &xpv1.NamespacedReference{Name: "example-group"}}}
 				u.Spec.ForProvider.Groups = &groups
 
@@ -102,8 +105,8 @@ func TestUserResolveReferences(t *testing.T) {
 		"GroupIdRef_WithExplicitNamespace": {
 			reason: "An explicit namespace in GroupIdRef is respected.",
 			user: func() *User {
-				u := newTestUser(ns)
-				groups := []UserGroupsParameters{{GroupIdRef: &xpv1.NamespacedReference{Name: "example-group", Namespace: ns}}}
+				u := newTestUser(testNamespace)
+				groups := []UserGroupsParameters{{GroupIdRef: &xpv1.NamespacedReference{Name: "example-group", Namespace: testNamespace}}}
 				u.Spec.ForProvider.Groups = &groups
 
 				return u
@@ -120,7 +123,7 @@ func TestUserResolveReferences(t *testing.T) {
 		"GroupIdRef_WrongName_ReturnsError": {
 			reason: "Using a non-existing Kubernetes group object name returns not found.",
 			user: func() *User {
-				u := newTestUser(ns)
+				u := newTestUser(testNamespace)
 				groups := []UserGroupsParameters{{GroupIdRef: &xpv1.NamespacedReference{Name: "sonarqube-group-key-instead-of-k8s-name"}}}
 				u.Spec.ForProvider.Groups = &groups
 
@@ -134,7 +137,7 @@ func TestUserResolveReferences(t *testing.T) {
 		"GroupIdSelector_ResolvesToExternalName": {
 			reason: "A selector lists matching Groups and resolves the external name.",
 			user: func() *User {
-				u := newTestUser(ns)
+				u := newTestUser(testNamespace)
 				groups := []UserGroupsParameters{{GroupIdSelector: &xpv1.Selector{MatchLabels: map[string]string{"team": "platform"}}}}
 				u.Spec.ForProvider.Groups = &groups
 
@@ -147,7 +150,7 @@ func TestUserResolveReferences(t *testing.T) {
 						return nil
 					}
 
-					group := Group{ObjectMeta: metav1.ObjectMeta{Name: "platform-group", Namespace: ns}}
+					group := Group{ObjectMeta: metav1.ObjectMeta{Name: "platform-group", Namespace: testNamespace}}
 					setExtName(&group, "platform")
 					groupList.Items = []Group{group}
 
@@ -159,7 +162,7 @@ func TestUserResolveReferences(t *testing.T) {
 		"GroupId_StaleCachedK8sName_IsOverwrittenByAnnotation": {
 			reason: "A stale cached GroupId (K8s name) must be overwritten when GroupIdRef is set.",
 			user: func() *User {
-				u := newTestUser(ns)
+				u := newTestUser(testNamespace)
 				groups := []UserGroupsParameters{{GroupId: ptr.To("example-group"), GroupIdRef: &xpv1.NamespacedReference{Name: "example-group"}}}
 				u.Spec.ForProvider.Groups = &groups
 
@@ -177,7 +180,7 @@ func TestUserResolveReferences(t *testing.T) {
 		"MultipleGroups_MixedInputs_AllResolvedIndependently": {
 			reason: "Direct, ref and selector based groups are each resolved and retained independently.",
 			user: func() *User {
-				u := newTestUser(ns)
+				u := newTestUser(testNamespace)
 				groups := []UserGroupsParameters{
 					{GroupId: ptr.To("devs")},
 					{GroupIdRef: &xpv1.NamespacedReference{Name: "group-ref-ops"}},
@@ -203,7 +206,7 @@ func TestUserResolveReferences(t *testing.T) {
 						return nil
 					}
 
-					group := Group{ObjectMeta: metav1.ObjectMeta{Name: "selector-group", Namespace: ns}}
+					group := Group{ObjectMeta: metav1.ObjectMeta{Name: "selector-group", Namespace: testNamespace}}
 					setExtName(&group, "sec")
 					groupList.Items = []Group{group}
 
@@ -260,12 +263,11 @@ func TestUserResolveReferences(t *testing.T) {
 	}
 }
 
+// TestUserResolveReferences_StopsOnFirstError tests error stopping behavior.
 func TestUserResolveReferences_StopsOnFirstError(t *testing.T) {
 	t.Parallel()
 
-	const ns = "default"
-
-	u := newTestUser(ns)
+	u := newTestUser(testNamespace)
 	groups := []UserGroupsParameters{
 		{GroupIdRef: &xpv1.NamespacedReference{Name: "missing-group"}},
 		{GroupIdRef: &xpv1.NamespacedReference{Name: "second-group"}},

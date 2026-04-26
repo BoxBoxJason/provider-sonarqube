@@ -25,10 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ResolveReferences parses the references to other custom resources and resolves them to
-// the actual values.
-func (project *Project) ResolveReferences(ctx context.Context, client client.Reader) error {
-	resolver := reference.NewAPINamespacedResolver(client, project)
+// ResolveReferences parses the references to other custom
+// resources and resolves them to the actual values.
+func (project *Project) ResolveReferences(ctx context.Context, readerClient client.Reader) error {
+	resolver := reference.NewAPINamespacedResolver(readerClient, project)
 
 	// Resolve Quality Gate Name.
 	//
@@ -109,10 +109,11 @@ func (project *Project) ResolveReferences(ctx context.Context, client client.Rea
 	return nil
 }
 
-// ResolveReferences parses the references to other custom resources and resolves them to
+// ResolveReferences parses the references to other custom resources and
+// resolves them to
 // the actual values.
-func (qualityProfile *QualityProfile) ResolveReferences(ctx context.Context, client client.Reader) error {
-	resolver := reference.NewAPINamespacedResolver(client, qualityProfile)
+func (qualityProfile *QualityProfile) ResolveReferences(ctx context.Context, readerClient client.Reader) error {
+	resolver := reference.NewAPINamespacedResolver(readerClient, qualityProfile)
 
 	// Resolve Rule for each profile rule.
 	for ruleIdx, profileRule := range qualityProfile.Spec.ForProvider.Rules {

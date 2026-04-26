@@ -75,7 +75,8 @@ type QualityProfileObservation struct {
 	Rules []QualityProfileRuleObservation `json:"rules,omitempty"`
 }
 
-// QualityProfileRuleParameters are the configurable fields of a QualityProfile Rule.
+// QualityProfileRuleParameters are the configurable fields of a
+// QualityProfile Rule.
 type QualityProfileRuleParameters struct {
 	// Impacts overrides severities for the rule. Cannot be used as the same time as 'severity'.
 	// If used together with 'severity', 'impacts' will take precedence.
@@ -104,7 +105,8 @@ type QualityProfileRuleParameters struct {
 	Severity *string `json:"severity,omitempty"`
 }
 
-// QualityProfileRuleObservation are the observable fields of a QualityProfile Rule.
+// QualityProfileRuleObservation are the observable fields of a
+// QualityProfile Rule.
 type QualityProfileRuleObservation struct {
 	Key         string                     `json:"key"`
 	Name        string                     `json:"name"`
@@ -116,6 +118,8 @@ type QualityProfileRuleObservation struct {
 	Prioritized bool                       `json:"prioritized"`
 }
 
+// QualityProfileRuleImpact represents the impact of a rule
+// on software quality.
 type QualityProfileRuleImpact struct {
 	Severity        string `json:"severity,omitempty"`
 	SoftwareQuality string `json:"softwareQuality,omitempty"`
@@ -170,6 +174,7 @@ var (
 	QualityProfileGroupVersionKind = SchemeGroupVersion.WithKind(QualityProfileKind)
 )
 
+// init registers the QualityProfile resource with the Scheme.
 func init() {
 	SchemeBuilder.Register(&QualityProfile{}, &QualityProfileList{})
 }

@@ -52,35 +52,46 @@ import (
 // https://github.com/crossplane/crossplane/blob/master/CONTRIBUTING.md#contributing-code
 
 const (
-	testExternalName     = "gitlab-main"
+	// testExternalName is the test ALM GitLab external name.
+	testExternalName = "gitlab-main"
+	// testRenamedGitLabKey is a renamed GitLab key for testing.
 	testRenamedGitLabKey = "gitlab-renamed"
-	testGitLabURL        = "https://gitlab.example.com"
+	// testGitLabURL is the test GitLab URL.
+	testGitLabURL = "https://gitlab.example.com"
+	// gitlabPATValue is the test GitLab personal access token value.
+	gitlabPATValue = "gitlabPATValue"
 )
 
+// notALMGitLab is a test type that is not an ALMGitLab.
 type notALMGitLab struct {
 	resource.Managed
 }
 
+// mockGate is a mock implementation of the feature gate interface.
 type mockGate struct {
 	registered bool
 	callback   func()
 	gvks       []schema.GroupVersionKind
 }
 
+// Register registers a callback with the mock gate.
 func (m *mockGate) Register(callback func(), gvks ...schema.GroupVersionKind) {
 	m.registered = true
 	m.callback = callback
 	m.gvks = append(m.gvks, gvks...)
 }
 
+// Set sets a feature gate status in the mock.
 func (m *mockGate) Set(_ schema.GroupVersionKind, _ bool) bool {
 	return false
 }
 
+// mockHTTPResponse creates a mock HTTP response with the given status code.
 func mockHTTPResponse(statusCode int) *http.Response {
 	return &http.Response{StatusCode: statusCode, Body: http.NoBody}
 }
 
+// checkError checks if an error matches expectations.
 func checkError(t *testing.T, method, wantErrSubstr string, gotErr error) {
 	t.Helper()
 
@@ -105,6 +116,7 @@ func checkError(t *testing.T, method, wantErrSubstr string, gotErr error) {
 	}
 }
 
+// newTestALMGitLab creates a test ALMGitLab resource.
 func newTestALMGitLab(externalName string, tokenSelector *xpv1.LocalSecretKeySelector) *v1alpha1.ALMGitLab {
 	alm := &v1alpha1.ALMGitLab{
 		ObjectMeta: metav1.ObjectMeta{
@@ -132,6 +144,7 @@ func newTestALMGitLab(externalName string, tokenSelector *xpv1.LocalSecretKeySel
 	return alm
 }
 
+// tokenSecret creates a test secret with a personal access token.
 func tokenSecret(name, namespace, key, value string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
@@ -139,6 +152,7 @@ func tokenSecret(name, namespace, key, value string) *corev1.Secret {
 	}
 }
 
+// TestObserve tests observing ALMGitLab resource state.
 func TestObserve(t *testing.T) {
 	t.Parallel()
 
@@ -185,7 +199,7 @@ func TestObserve(t *testing.T) {
 			want:           want{observation: managed.ExternalObservation{}, errSubstr: "personal access token is empty"},
 		},
 		"MissingSavedTokenSecretDoesNotFailObserve": {
-			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", gitlabPATValue)},
 			settingsClient: &fake.MockALMSettingsGitLabClient{ListDefinitionsFn: func() (*sonar.AlmSettingsListDefinitions, *http.Response, error) {
 				return &sonar.AlmSettingsListDefinitions{Gitlab: []sonar.GitlabDefinition{{Key: testExternalName, URL: testGitLabURL}}}, mockHTTPResponse(http.StatusOK), nil
 			}},
@@ -201,7 +215,7 @@ func TestObserve(t *testing.T) {
 		},
 		"MissingSavedTokenKeyDoesNotFailObserve": {
 			objects: []runtime.Object{
-				tokenSecret("pat-secret", "default", "token", "pat-value"),
+				tokenSecret("pat-secret", "default", "token", gitlabPATValue),
 				tokenSecret("connection-secret", "default", "other-key", "value"),
 			},
 			settingsClient: &fake.MockALMSettingsGitLabClient{ListDefinitionsFn: func() (*sonar.AlmSettingsListDefinitions, *http.Response, error) {
@@ -219,8 +233,8 @@ func TestObserve(t *testing.T) {
 		},
 		"SuccessfulObserveUpToDate": {
 			objects: []runtime.Object{
-				tokenSecret("pat-secret", "default", "token", "pat-value"),
-				tokenSecret("connection-secret", "default", connectionDetailTokenKey, "pat-value"),
+				tokenSecret("pat-secret", "default", "token", gitlabPATValue),
+				tokenSecret("connection-secret", "default", connectionDetailTokenKey, gitlabPATValue),
 			},
 			settingsClient: &fake.MockALMSettingsGitLabClient{ListDefinitionsFn: func() (*sonar.AlmSettingsListDefinitions, *http.Response, error) {
 				return &sonar.AlmSettingsListDefinitions{Gitlab: []sonar.GitlabDefinition{{Key: testExternalName, URL: testGitLabURL}}}, mockHTTPResponse(http.StatusOK), nil
@@ -237,7 +251,7 @@ func TestObserve(t *testing.T) {
 		},
 		"SuccessfulObserveNotUpToDate": {
 			objects: []runtime.Object{
-				tokenSecret("pat-secret", "default", "token", "pat-value"),
+				tokenSecret("pat-secret", "default", "token", gitlabPATValue),
 				tokenSecret("connection-secret", "default", connectionDetailTokenKey, "different"),
 			},
 			settingsClient: &fake.MockALMSettingsGitLabClient{ListDefinitionsFn: func() (*sonar.AlmSettingsListDefinitions, *http.Response, error) {
@@ -257,7 +271,7 @@ func TestObserve(t *testing.T) {
 			// When writeConnectionSecretToRef is not set (bypassing CRD validation), the
 			// controller cannot compare stored vs current secret values and treats the
 			// resource as out-of-date so the next Update re-writes the connection secret.
-			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", gitlabPATValue)},
 			settingsClient: &fake.MockALMSettingsGitLabClient{ListDefinitionsFn: func() (*sonar.AlmSettingsListDefinitions, *http.Response, error) {
 				return &sonar.AlmSettingsListDefinitions{Gitlab: []sonar.GitlabDefinition{{Key: testExternalName, URL: testGitLabURL}}}, mockHTTPResponse(http.StatusOK), nil
 			}},
@@ -305,6 +319,7 @@ func TestObserve(t *testing.T) {
 	}
 }
 
+// TestCreate tests creating an ALMGitLab resource.
 func TestCreate(t *testing.T) {
 	t.Parallel()
 
@@ -345,9 +360,10 @@ func TestCreate(t *testing.T) {
 			want:           want{creation: managed.ExternalCreation{}, errSubstr: "personal access token is empty"},
 		},
 		"CreateError": {
-			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", gitlabPATValue)},
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				CreateGitlabFn: func(_ *sonar.AlmSettingsCreateGitlabOptions) (*http.Response, error) {
+					//nolint:nilnil // Intentional: simulating partial HTTP failure.
 					return mockHTTPResponse(http.StatusInternalServerError), errors.New("api create failed")
 				},
 			},
@@ -355,10 +371,10 @@ func TestCreate(t *testing.T) {
 			want: want{creation: managed.ExternalCreation{}, errSubstr: "cannot create ALMGitLab resource in SonarQube API"},
 		},
 		"SuccessfulCreate": {
-			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", gitlabPATValue)},
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				CreateGitlabFn: func(opt *sonar.AlmSettingsCreateGitlabOptions) (*http.Response, error) {
-					if opt == nil || opt.Key != testExternalName || opt.URL != testGitLabURL || opt.PersonalAccessToken != "pat-value" {
+					if opt == nil || opt.Key != testExternalName || opt.URL != testGitLabURL || opt.PersonalAccessToken != gitlabPATValue {
 						t.Fatalf("Create() unexpected options: %+v", opt)
 					}
 
@@ -366,7 +382,7 @@ func TestCreate(t *testing.T) {
 				},
 			},
 			args: args{ctx: context.Background(), mg: newTestALMGitLab("", tokenRef)},
-			want: want{creation: managed.ExternalCreation{ConnectionDetails: managed.ConnectionDetails{connectionDetailTokenKey: []byte("pat-value")}}},
+			want: want{creation: managed.ExternalCreation{ConnectionDetails: managed.ConnectionDetails{connectionDetailTokenKey: []byte(gitlabPATValue)}}},
 		},
 	}
 
@@ -409,6 +425,7 @@ func TestCreate(t *testing.T) {
 	}
 }
 
+// TestUpdate tests updating an ALMGitLab resource.
 func TestUpdate(t *testing.T) { //nolint:gocognit // table-driven test covers all update paths
 	t.Parallel()
 
@@ -456,9 +473,10 @@ func TestUpdate(t *testing.T) { //nolint:gocognit // table-driven test covers al
 			want:           want{update: managed.ExternalUpdate{}, errSubstr: "personal access token is empty"},
 		},
 		"UpdateError": {
-			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", gitlabPATValue)},
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				UpdateGitlabFn: func(_ *sonar.AlmSettingsUpdateGitlabOptions) (*http.Response, error) {
+					//nolint:nilnil // Intentional: simulating partial HTTP failure.
 					return mockHTTPResponse(http.StatusInternalServerError), errors.New("api update failed")
 				},
 			},
@@ -466,10 +484,10 @@ func TestUpdate(t *testing.T) { //nolint:gocognit // table-driven test covers al
 			want: want{update: managed.ExternalUpdate{}, errSubstr: "cannot update ALMGitLab resource in SonarQube API"},
 		},
 		"SuccessfulUpdateWithoutKeyChange": {
-			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", gitlabPATValue)},
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				UpdateGitlabFn: func(opt *sonar.AlmSettingsUpdateGitlabOptions) (*http.Response, error) {
-					if opt == nil || opt.Key != testExternalName || opt.NewKey != "" || opt.URL != testGitLabURL || opt.PersonalAccessToken != "pat-value" {
+					if opt == nil || opt.Key != testExternalName || opt.NewKey != "" || opt.URL != testGitLabURL || opt.PersonalAccessToken != gitlabPATValue {
 						t.Fatalf("Update() unexpected options: %+v", opt)
 					}
 
@@ -477,10 +495,10 @@ func TestUpdate(t *testing.T) { //nolint:gocognit // table-driven test covers al
 				},
 			},
 			args: args{ctx: context.Background(), mg: newTestALMGitLab(testExternalName, tokenRef)},
-			want: want{update: managed.ExternalUpdate{ConnectionDetails: managed.ConnectionDetails{connectionDetailTokenKey: []byte("pat-value")}}},
+			want: want{update: managed.ExternalUpdate{ConnectionDetails: managed.ConnectionDetails{connectionDetailTokenKey: []byte(gitlabPATValue)}}},
 		},
 		"SuccessfulUpdateWithKeyChange": {
-			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", gitlabPATValue)},
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				UpdateGitlabFn: func(opt *sonar.AlmSettingsUpdateGitlabOptions) (*http.Response, error) {
 					if opt == nil || opt.Key != testExternalName || opt.NewKey != testRenamedGitLabKey {
@@ -496,11 +514,11 @@ func TestUpdate(t *testing.T) { //nolint:gocognit // table-driven test covers al
 
 				return alm
 			}()},
-			want:       want{update: managed.ExternalUpdate{ConnectionDetails: managed.ConnectionDetails{connectionDetailTokenKey: []byte("pat-value")}}},
+			want:       want{update: managed.ExternalUpdate{ConnectionDetails: managed.ConnectionDetails{connectionDetailTokenKey: []byte(gitlabPATValue)}}},
 			registerMG: true,
 		},
 		"UpdateKeyChangePersistError": {
-			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", "pat-value")},
+			objects: []runtime.Object{tokenSecret("pat-secret", "default", "token", gitlabPATValue)},
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				UpdateGitlabFn: func(_ *sonar.AlmSettingsUpdateGitlabOptions) (*http.Response, error) {
 					return mockHTTPResponse(http.StatusOK), nil
@@ -580,6 +598,7 @@ func TestUpdate(t *testing.T) { //nolint:gocognit // table-driven test covers al
 	}
 }
 
+// TestDelete tests deleting an ALMGitLab resource.
 func TestDelete(t *testing.T) {
 	t.Parallel()
 
@@ -614,10 +633,11 @@ func TestDelete(t *testing.T) {
 		"DeleteError": {
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				DeleteFn: func(opt *sonar.AlmSettingsDeleteOptions) (*http.Response, error) {
-					if opt == nil || opt.Key != "gitlab-main" {
+					if opt == nil || opt.Key != testExternalName {
 						t.Fatalf("Delete() unexpected options: %+v", opt)
 					}
 
+					//nolint:nilnil // Intentional: simulating partial HTTP failure.
 					return mockHTTPResponse(http.StatusInternalServerError), errors.New("api delete failed")
 				},
 			},
@@ -628,7 +648,7 @@ func TestDelete(t *testing.T) {
 		"SuccessfulDelete": {
 			settingsClient: &fake.MockALMSettingsGitLabClient{
 				DeleteFn: func(opt *sonar.AlmSettingsDeleteOptions) (*http.Response, error) {
-					if opt == nil || opt.Key != "gitlab-main" {
+					if opt == nil || opt.Key != testExternalName {
 						t.Fatalf("Delete() unexpected options: %+v", opt)
 					}
 
@@ -671,6 +691,7 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+// TestDisconnect tests disconnecting an ALMGitLab resource.
 func TestDisconnect(t *testing.T) {
 	t.Parallel()
 
@@ -682,6 +703,8 @@ func TestDisconnect(t *testing.T) {
 	}
 }
 
+// TestGetSavedAPIToken tests retrieving the saved API token
+// from an ALMGitLab resource.
 func TestGetSavedAPIToken(t *testing.T) {
 	t.Parallel()
 
@@ -773,6 +796,7 @@ func TestGetSavedAPIToken(t *testing.T) {
 	}
 }
 
+// TestConnect tests connecting to an ALMGitLab resource.
 func TestConnect(t *testing.T) {
 	t.Parallel()
 
@@ -908,6 +932,8 @@ func TestConnect(t *testing.T) {
 	})
 }
 
+// TestSetupGatedRegistersALMGitLabGVK tests that SetupGated
+// registers the ALMGitLab GVK.
 func TestSetupGatedRegistersALMGitLabGVK(t *testing.T) {
 	t.Parallel()
 
@@ -937,6 +963,8 @@ func TestSetupGatedRegistersALMGitLabGVK(t *testing.T) {
 	}
 }
 
+// TestSetupGatedCallbackPanicsWhenSetupFails tests that the
+// SetupGated callback panics on setup failure.
 func TestSetupGatedCallbackPanicsWhenSetupFails(t *testing.T) {
 	t.Parallel()
 

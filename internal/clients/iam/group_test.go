@@ -27,6 +27,19 @@ import (
 	"github.com/crossplane/provider-sonarqube/internal/clients/common"
 )
 
+const (
+	// lateInitCustomDesc is a test constant for custom descriptions.
+	lateInitCustomDesc = "custom"
+	// lateInitWritePerm is a test constant for write permissions.
+	lateInitWritePerm = "write"
+	// lateInitGroupID is a test constant for group IDs.
+	lateInitGroupID = "group-1"
+	// lateInitUserID is a test constant for user IDs.
+	lateInitUserID = "user-1"
+	// lateInitGroupDesc is a test constant for group descriptions.
+	lateInitGroupDesc = "engineering"
+)
+
 // Unlike many Kubernetes projects Crossplane does not use third party testing
 // libraries, per the common Go test review comments. Crossplane encourages the
 // use of table driven unit tests. The tests of the crossplane-runtime project
@@ -73,14 +86,13 @@ func TestLateInitializeGroup(t *testing.T) {
 	t.Run("DescriptionNotOverwrittenWhenPresent", func(t *testing.T) {
 		t.Parallel()
 
-		current := "custom"
-		spec := &v1alpha1.GroupParameters{Name: "devs", Description: &current}
+		spec := &v1alpha1.GroupParameters{Name: "devs", Description: ptr.To(lateInitCustomDesc)}
 		obs := &v1alpha1.GroupObservation{Description: "engineering group"}
 
 		LateInitializeGroup(spec, obs)
 
-		if spec.Description == nil || *spec.Description != "custom" {
-			t.Fatalf("LateInitializeGroup() description = %v, want %q", spec.Description, "custom")
+		if spec.Description == nil || *spec.Description != lateInitCustomDesc {
+			t.Fatalf("LateInitializeGroup() description = %v, want %q", spec.Description, lateInitCustomDesc)
 		}
 	})
 
@@ -126,14 +138,14 @@ func TestLateInitializeGroup(t *testing.T) {
 	t.Run("PermissionsNotOverwrittenWhenPresent", func(t *testing.T) {
 		t.Parallel()
 
-		existing := []string{"write"}
+		existing := []string{lateInitWritePerm}
 		spec := &v1alpha1.GroupParameters{Name: "devs", Permissions: &existing}
-		obs := &v1alpha1.GroupObservation{Permissions: []string{"read", "write"}}
+		obs := &v1alpha1.GroupObservation{Permissions: []string{"read", lateInitWritePerm}}
 
 		LateInitializeGroup(spec, obs)
 
-		if spec.Permissions == nil || len(*spec.Permissions) != 1 || (*spec.Permissions)[0] != "write" {
-			t.Fatalf("LateInitializeGroup() permissions = %v, want [\"write\"]", spec.Permissions)
+		if spec.Permissions == nil || len(*spec.Permissions) != 1 || (*spec.Permissions)[0] != lateInitWritePerm {
+			t.Fatalf("LateInitializeGroup() permissions = %v, want [%q]", spec.Permissions, lateInitWritePerm)
 		}
 	})
 }
@@ -218,17 +230,18 @@ func TestNewPermissionsClient(t *testing.T) {
 	}
 }
 
-// TestGeneratePermissionsAddGroupOptions tests the GeneratePermissionsAddGroupOptions function.
+// TestGeneratePermissionsAddGroupOptions tests the
+// GeneratePermissionsAddGroupOptions function.
 func TestGeneratePermissionsAddGroupOptions(t *testing.T) {
 	t.Parallel()
 
-	got := GeneratePermissionsAddGroupOptions("devs", "read")
+	got := GeneratePermissionsAddGroupOptions(testGroupName, "read")
 	if got == nil {
 		t.Fatal("GeneratePermissionsAddGroupOptions() expected non-nil options")
 	}
 
-	if got.GroupName != "devs" {
-		t.Fatalf("GeneratePermissionsAddGroupOptions() GroupName = %q, want %q", got.GroupName, "devs")
+	if got.GroupName != testGroupName {
+		t.Fatalf("GeneratePermissionsAddGroupOptions() GroupName = %q, want %q", got.GroupName, testGroupName)
 	}
 
 	if got.Permission != "read" {
@@ -236,17 +249,18 @@ func TestGeneratePermissionsAddGroupOptions(t *testing.T) {
 	}
 }
 
-// TestGeneratePermissionsRemoveGroupOptions tests the GeneratePermissionsRemoveGroupOptions function.
+// TestGeneratePermissionsRemoveGroupOptions tests the
+// GeneratePermissionsRemoveGroupOptions function.
 func TestGeneratePermissionsRemoveGroupOptions(t *testing.T) {
 	t.Parallel()
 
-	got := GeneratePermissionsRemoveGroupOptions("devs", "write")
+	got := GeneratePermissionsRemoveGroupOptions(testGroupName, lateInitWritePerm)
 	if got == nil {
 		t.Fatal("GeneratePermissionsRemoveGroupOptions() expected non-nil options")
 	}
 
-	if got.GroupName != "devs" {
-		t.Fatalf("GeneratePermissionsRemoveGroupOptions() GroupName = %q, want %q", got.GroupName, "devs")
+	if got.GroupName != testGroupName {
+		t.Fatalf("GeneratePermissionsRemoveGroupOptions() GroupName = %q, want %q", got.GroupName, testGroupName)
 	}
 
 	if got.Permission != "write" {
@@ -254,7 +268,8 @@ func TestGeneratePermissionsRemoveGroupOptions(t *testing.T) {
 	}
 }
 
-// TestGeneratePermissionsGroupsOptions tests the GeneratePermissionsGroupsOptions function.
+// TestGeneratePermissionsGroupsOptions tests the
+// GeneratePermissionsGroupsOptions function.
 func TestGeneratePermissionsGroupsOptions(t *testing.T) {
 	t.Parallel()
 
@@ -304,20 +319,22 @@ func TestGeneratePermissionsGroupsOptions(t *testing.T) {
 	}
 }
 
+// TestGenerateGroupCreateMembershipOptions tests creating membership options.
 func TestGenerateGroupCreateMembershipOptions(t *testing.T) {
 	t.Parallel()
 
-	got := GenerateGroupCreateMembershipOptions("group-1", "user-1")
-	if got.GroupId != "group-1" || got.UserId != "user-1" {
+	got := GenerateGroupCreateMembershipOptions(lateInitGroupID, lateInitUserID)
+	if got.GroupId != lateInitGroupID || got.UserId != lateInitUserID {
 		t.Fatalf("GenerateGroupCreateMembershipOptions() = %+v", got)
 	}
 }
 
+// TestGenerateGroupSearchMembershipsOptions tests searching membership options.
 func TestGenerateGroupSearchMembershipsOptions(t *testing.T) {
 	t.Parallel()
 
-	groupID := "group-1"
-	userID := "user-1"
+	groupID := lateInitGroupID
+	userID := lateInitUserID
 	pagination := &sonar.PaginationParamsV2{PageIndex: 2, PageSize: 50}
 
 	got := GenerateGroupSearchMembershipsOptions(&groupID, &userID, pagination)
@@ -330,6 +347,8 @@ func TestGenerateGroupSearchMembershipsOptions(t *testing.T) {
 	}
 }
 
+// TestGenerateGroupMembershipObservation tests generating
+// membership observations.
 func TestGenerateGroupMembershipObservation(t *testing.T) {
 	t.Parallel()
 
@@ -347,8 +366,8 @@ func TestGenerateGroupMembershipObservation(t *testing.T) {
 func TestIsGroupUpToDate(t *testing.T) {
 	t.Parallel()
 
-	desc := "engineering"
-	perms := []string{"read", "write"}
+	desc := lateInitGroupDesc
+	perms := []string{"read", lateInitWritePerm}
 
 	cases := map[string]struct {
 		spec *v1alpha1.GroupParameters
@@ -357,47 +376,47 @@ func TestIsGroupUpToDate(t *testing.T) {
 	}{
 		"NilSpec": {
 			spec: nil,
-			obs:  &v1alpha1.GroupObservation{Name: "devs"},
+			obs:  &v1alpha1.GroupObservation{Name: testGroupName},
 			want: true,
 		},
 		"NilObservation": {
-			spec: &v1alpha1.GroupParameters{Name: "devs"},
+			spec: &v1alpha1.GroupParameters{Name: testGroupName},
 			obs:  nil,
 			want: false,
 		},
 		"UpToDate": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Description: &desc},
-			obs:  &v1alpha1.GroupObservation{Name: "devs", Description: "engineering"},
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Description: &desc},
+			obs:  &v1alpha1.GroupObservation{Name: testGroupName, Description: lateInitGroupDesc},
 			want: true,
 		},
 		"NameMismatch": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Description: &desc},
-			obs:  &v1alpha1.GroupObservation{Name: "admins", Description: "engineering"},
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Description: &desc},
+			obs:  &v1alpha1.GroupObservation{Name: "admins", Description: lateInitGroupDesc},
 			want: false,
 		},
 		"DescriptionMismatch": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Description: &desc},
-			obs:  &v1alpha1.GroupObservation{Name: "devs", Description: "different"},
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Description: &desc},
+			obs:  &v1alpha1.GroupObservation{Name: testGroupName, Description: "different"},
 			want: false,
 		},
 		"NilDescriptionIsComparable": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Description: nil},
-			obs:  &v1alpha1.GroupObservation{Name: "devs", Description: "any"},
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Description: nil},
+			obs:  &v1alpha1.GroupObservation{Name: testGroupName, Description: "any"},
 			want: true,
 		},
 		"PermissionsMatch": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Permissions: &perms},
-			obs:  &v1alpha1.GroupObservation{Name: "devs", Permissions: perms},
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Permissions: &perms},
+			obs:  &v1alpha1.GroupObservation{Name: testGroupName, Permissions: perms},
 			want: true,
 		},
 		"PermissionsMismatch": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Permissions: &[]string{"read"}},
-			obs:  &v1alpha1.GroupObservation{Name: "devs", Permissions: perms},
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Permissions: &[]string{"read"}},
+			obs:  &v1alpha1.GroupObservation{Name: testGroupName, Permissions: perms},
 			want: false,
 		},
 		"NilPermissionsIsUpToDate": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Permissions: nil},
-			obs:  &v1alpha1.GroupObservation{Name: "devs", Permissions: perms},
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Permissions: nil},
+			obs:  &v1alpha1.GroupObservation{Name: testGroupName, Permissions: perms},
 			want: true,
 		},
 	}
@@ -413,11 +432,12 @@ func TestIsGroupUpToDate(t *testing.T) {
 	}
 }
 
+// TestGenerateCreateGroupOptions tests creating group creation options.
 func TestGenerateCreateGroupOptions(t *testing.T) {
 	t.Parallel()
 
-	description := "engineering"
-	permissions := []string{"read", "write"}
+	description := lateInitGroupDesc
+	permissions := []string{"read", lateInitWritePerm}
 
 	cases := map[string]struct {
 		spec *v1alpha1.GroupParameters
@@ -427,16 +447,16 @@ func TestGenerateCreateGroupOptions(t *testing.T) {
 			spec: nil,
 		},
 		"WithoutDescription": {
-			spec: &v1alpha1.GroupParameters{Name: "devs"},
-			want: "devs",
+			spec: &v1alpha1.GroupParameters{Name: testGroupName},
+			want: testGroupName,
 		},
 		"WithDescription": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Description: &description},
-			want: "devs",
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Description: &description},
+			want: testGroupName,
 		},
 		"WithPermissions": {
-			spec: &v1alpha1.GroupParameters{Name: "devs", Permissions: &permissions},
-			want: "devs",
+			spec: &v1alpha1.GroupParameters{Name: testGroupName, Permissions: &permissions},
+			want: testGroupName,
 		},
 	}
 
@@ -473,6 +493,7 @@ func TestGenerateCreateGroupOptions(t *testing.T) {
 	}
 }
 
+// TestGenerateUpdateGroupOptions tests creating group update options.
 func TestGenerateUpdateGroupOptions(t *testing.T) {
 	t.Parallel()
 
@@ -524,6 +545,7 @@ func TestGenerateUpdateGroupOptions(t *testing.T) {
 	}
 }
 
+// TestGenerateGroupObservation tests generating group observations.
 func TestGenerateGroupObservation(t *testing.T) {
 	t.Parallel()
 
@@ -565,6 +587,7 @@ func TestGenerateGroupObservation(t *testing.T) {
 	}
 }
 
+// TestNewGroupsClient tests creating a new groups client.
 func TestNewGroupsClient(t *testing.T) {
 	t.Parallel()
 

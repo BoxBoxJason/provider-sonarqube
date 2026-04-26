@@ -35,12 +35,18 @@ import (
 	"github.com/crossplane/provider-sonarqube/internal/fake"
 )
 
+const (
+	// templateNameA is a test template name.
+	templateNameA = "template-a"
+)
+
+// TestUpdate tests the Update method.
 func TestUpdate(t *testing.T) {
 	t.Parallel()
 
 	baseTemplate := func() *v1alpha1.PermissionsTemplate {
 		return withExternalName(&v1alpha1.PermissionsTemplate{
-			ObjectMeta: metav1.ObjectMeta{Name: "template-a"},
+			ObjectMeta: metav1.ObjectMeta{Name: templateNameA},
 			Spec: v1alpha1.PermissionsTemplateSpec{
 				ForProvider: v1alpha1.PermissionsTemplateParameters{
 					Name:               "template-a",
@@ -164,6 +170,7 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
+// TestComputePermissionsDiff tests computePermissionsDiff function.
 func TestComputePermissionsDiff(t *testing.T) {
 	t.Parallel()
 
@@ -196,6 +203,7 @@ func TestComputePermissionsDiff(t *testing.T) {
 	}
 }
 
+// TestApplyTemplatePermissions tests applyTemplatePermissions function.
 func TestApplyTemplatePermissions(t *testing.T) {
 	t.Parallel()
 
@@ -245,6 +253,7 @@ func TestApplyTemplatePermissions(t *testing.T) {
 	}
 }
 
+// TestBaseFieldsAndDefaultHelpers tests base fields and default helpers.
 func TestBaseFieldsAndDefaultHelpers(t *testing.T) {
 	t.Parallel()
 
@@ -254,7 +263,7 @@ func TestBaseFieldsAndDefaultHelpers(t *testing.T) {
 	template.Spec.ForProvider.Description = ptr.To("desc")
 	template.Spec.ForProvider.ProjectKeyPattern = ptr.To("proj-.*")
 	template.Spec.ForProvider.Default = ptr.To(true)
-	template.Status.AtProvider.Name = "template-a"
+	template.Status.AtProvider.Name = templateNameA
 	template.Status.AtProvider.Description = "desc"
 	template.Status.AtProvider.ProjectKeyPattern = "proj-.*"
 	template.Status.AtProvider.Default = true
@@ -278,6 +287,8 @@ func TestBaseFieldsAndDefaultHelpers(t *testing.T) {
 	}
 }
 
+// TestGroupUserCreatorReconciliation tests group, user, and creator
+// reconciliation.
 func TestGroupUserCreatorReconciliation(t *testing.T) {
 	t.Parallel()
 

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package rule provides a controller for Rule resources.
 package rule
 
 import (
@@ -43,14 +44,16 @@ import (
 )
 
 const (
-	errNotRule      = "managed resource is not a Rule custom resource"
+	// errNotRule indicates managed resource is not a Rule.
+	errNotRule = "managed resource is not a Rule custom resource"
+	// errTrackPCUsage indicates ProviderConfig usage tracking failed.
 	errTrackPCUsage = "cannot track ProviderConfig usage"
-	errGetPC        = "cannot get ProviderConfig"
-	errGetCPC       = "cannot get ClusterProviderConfig"
-	errGetCreds     = "cannot get credentials"
+	// errGetPC indicates ProviderConfig retrieval failed.
+	errGetPC = "cannot get ProviderConfig"
 )
 
-// SetupGated adds a controller that reconciles Rule managed resources with safe-start support.
+// SetupGated adds a controller that reconciles Rule managed
+// resources with safe-start support.
 func SetupGated(mgr ctrl.Manager, o controller.Options) error {
 	o.Gate.Register(func() {
 		err := Setup(mgr, o)
@@ -62,6 +65,7 @@ func SetupGated(mgr ctrl.Manager, o controller.Options) error {
 	return nil
 }
 
+// Setup adds a controller that reconciles Rule managed resources.
 func Setup(mgr ctrl.Manager, o controller.Options) error { //nolint:varnamelen // consistent with other controllers
 	name := managed.ControllerName(v1alpha1.RuleGroupKind)
 
@@ -148,8 +152,7 @@ func (c *connector) Connect(ctx context.Context, managedResource resource.Manage
 	return &external{rulesClient: svc}, nil
 }
 
-// An ExternalClient observes, then either creates, updates, or deletes an
-// external resource to ensure it reflects the managed resource's desired state.
+// external implements the managed.ExternalClient interface for Rule resources.
 type external struct {
 	// rulesClient is used to interact with SonarQube Rules API
 	rulesClient instance.RulesClient
@@ -210,7 +213,8 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}, nil
 }
 
-// Create creates the external resource based on the desired state of the managed resource.
+// Create creates the external resource based on the desired state of
+// the managed resource.
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
 	rule, ok := mg.(*v1alpha1.Rule)
 	if !ok {
@@ -235,7 +239,8 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	}, nil
 }
 
-// Update updates the external resource to reflect the desired state of the managed resource.
+// Update updates the external resource to reflect the desired state of
+// the managed resource.
 func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
 	rule, ok := mg.(*v1alpha1.Rule)
 	if !ok {
@@ -301,6 +306,7 @@ func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
+// Disconnect closes the external client connection.
 func (c *external) Disconnect(ctx context.Context) error {
 	return nil
 }

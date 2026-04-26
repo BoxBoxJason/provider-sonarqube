@@ -36,6 +36,8 @@ type ProviderCredentials struct {
 	Source xpv1.CredentialsSource `json:"source"`
 }
 
+// ProviderConfigSpec defines the configuration for the
+// SonarQube provider.
 type ProviderConfigSpec struct {
 	// BaseURL of the SonarQube instance.
 	// +kubebuilder:validation:Required
@@ -142,7 +144,8 @@ type ClusterProviderConfigList struct {
 // +kubebuilder:printcolumn:name="RESOURCE-NAME",type="string",JSONPath=".resourceRef.name"
 // +kubebuilder:resource:scope=Cluster,categories={crossplane,provider,sonarqube}
 
-// ClusterProviderConfigUsage indicates that a resource is using a ClusterProviderConfig.
+// ClusterProviderConfigUsage indicates that a resource is using a
+// ClusterProviderConfig.
 type ClusterProviderConfigUsage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

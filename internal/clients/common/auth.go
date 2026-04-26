@@ -14,13 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package common provides common utilities and client configurations
+// for interacting with the SonarQube API.
 package common
 
 const (
-	// BasicAuth is SonarQube's BasicAuth method of authentification that needs a username and a password.
+	// BasicAuth is SonarQube's BasicAuth method of authentication that needs a
+	// username and a password.
 	BasicAuth AuthType = "BasicAuth"
 
-	// PersonalAccessToken is SonarQube's PersonalAccessToken method of authentification.
+	// PersonalAccessToken is SonarQube's PersonalAccessToken method of
+	// authentication.
 	PersonalAccessToken AuthType = "PersonalAccessToken"
 )
 

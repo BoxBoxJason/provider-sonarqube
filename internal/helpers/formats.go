@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package helpers provides utility functions for formatting and comparison.
 package helpers
 
 import (
@@ -26,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CloseBody closes the body of an http.Response safely.
+// CloseBody closes the body of an [http.Response] safely.
 // If the response or body is nil, it does nothing.
 // The error return value of Close is intentionally ignored.
 func CloseBody(resp *http.Response) {
@@ -36,9 +37,11 @@ func CloseBody(resp *http.Response) {
 	}
 }
 
-// IsComparablePtrEqualComparable compares a pointer to a comparable type with a comparable type.
+// IsComparablePtrEqualComparable compares a pointer to a comparable type with
+// a comparable type.
 // If the pointer is nil, it returns true.
-// Otherwise, it dereferences the pointer and compares the value with the provided comparable type.
+// Otherwise, it dereferences the pointer and compares the value with the
+// provided comparable type.
 func IsComparablePtrEqualComparable[T comparable](ptr *T, val T) bool {
 	// if ptr is nil, consider it equal (no difference between nil and any value)
 	if ptr == nil {
@@ -48,9 +51,11 @@ func IsComparablePtrEqualComparable[T comparable](ptr *T, val T) bool {
 	return cmp.Equal(*ptr, val)
 }
 
-// IsComparableSlicePtrEqualComparableSlice compares a pointer to a slice of comparable types with a slice of comparable types.
+// IsComparableSlicePtrEqualComparableSlice compares a pointer to a slice of
+// comparable types with a slice of comparable types.
 // If the pointer is nil, it returns true.
-// Otherwise, it dereferences the pointer and compares the slice with the provided slice of comparable types.
+// Otherwise, it dereferences the pointer and compares the slice with the
+// provided slice of comparable types.
 func IsComparableSlicePtrEqualComparableSlice[T comparable](ptr *[]T, val []T) bool {
 	// if ptr is nil, consider it equal (no difference between nil and any value)
 	if ptr == nil {
@@ -60,9 +65,11 @@ func IsComparableSlicePtrEqualComparableSlice[T comparable](ptr *[]T, val []T) b
 	return cmp.Equal(*ptr, val, cmpopts.EquateEmpty())
 }
 
-// IsComparableMapPtrEqualComparableMap compares a pointer to a map of comparable types with a map of comparable types.
+// IsComparableMapPtrEqualComparableMap compares a pointer to a map of
+// comparable types with a map of comparable types.
 // If the pointer is nil, it returns true.
-// Otherwise, it dereferences the pointer and compares the map with the provided map of comparable types.
+// Otherwise, it dereferences the pointer and compares the map with the
+// provided map of comparable types.
 func IsComparableMapPtrEqualComparableMap[K comparable, V comparable](ptr *map[K]V, val map[K]V) bool {
 	// if ptr is nil, consider it equal (no difference between nil and any value)
 	if ptr == nil {
@@ -76,7 +83,7 @@ func IsComparableMapPtrEqualComparableMap[K comparable, V comparable](ptr *map[K
 // If both pointers are nil, it returns true.
 // If one pointer is nil and the other is not, it returns false.
 // Otherwise, it dereferences both pointers and compares their values.
-func IsComparablePtrEqualComparablePtr[T comparable](ptr1 *T, ptr2 *T) bool {
+func IsComparablePtrEqualComparablePtr[T comparable](ptr1, ptr2 *T) bool {
 	// if both pointers are nil, consider them equal
 	if ptr1 == nil && ptr2 == nil {
 		return true
@@ -89,8 +96,10 @@ func IsComparablePtrEqualComparablePtr[T comparable](ptr1 *T, ptr2 *T) bool {
 	return cmp.Equal(*ptr1, *ptr2)
 }
 
-// AreStringSlicesEqual compares two slices of strings for equality, ignoring the order of elements.
-// It returns true if both slices contain the same strings, regardless of their order, and false otherwise.
+// AreStringSlicesEqual compares two slices of strings for equality, ignoring
+// the order of elements.
+// It returns true if both slices contain the same strings, regardless of their
+// order, and false otherwise.
 func AreStringSlicesEqual(sliceA, sliceB []string) bool {
 	if len(sliceA) != len(sliceB) {
 		return false
@@ -112,8 +121,10 @@ func AreStringSlicesEqual(sliceA, sliceB []string) bool {
 	return true
 }
 
-// AreStringSlicesEqualDeDuped compares two slices of strings for equality, ignoring the order of elements and duplicates.
-// It returns true if both slices contain the same unique strings, regardless of their order and duplicates, and false otherwise.
+// AreStringSlicesEqualDeDuped compares two slices of strings for equality,
+// ignoring the order of elements and duplicates.
+// It returns true if both slices contain the same unique strings, regardless
+// of their order and duplicates, and false otherwise.
 func AreStringSlicesEqualDeDuped(sliceA, sliceB []string) bool {
 	if len(sliceA) == 0 && len(sliceB) == 0 {
 		return true
@@ -164,7 +175,8 @@ func TimeToMetaTime(t *time.Time) *metav1.Time {
 	return &metav1.Time{Time: *t}
 }
 
-// StringToMetaTime converts a string pointer representing a time in RFC3339 format to a metav1.Time pointer.
+// StringToMetaTime converts a string pointer representing a time in RFC3339
+// format to a metav1.Time pointer.
 // Returns nil if the input string pointer is nil or if parsing fails.
 func StringToMetaTime(s *string) *metav1.Time {
 	if s == nil {
@@ -179,7 +191,8 @@ func StringToMetaTime(s *string) *metav1.Time {
 	return &metav1.Time{Time: parsedTime}
 }
 
-// AnySliceToStringSlice converts a []any to []string, skipping non-string elements.
+// AnySliceToStringSlice converts a []any to []string, skipping non-string
+// elements.
 func AnySliceToStringSlice(slice []any) []string {
 	result := make([]string, 0, len(slice))
 	for _, v := range slice {
@@ -191,9 +204,10 @@ func AnySliceToStringSlice(slice []any) []string {
 	return result
 }
 
-// AssignIfNonNil assigns a value to a pointer if the reference pointer is not nil.
+// AssignIfNonNil assigns a value to a pointer if the reference
+// pointer is not nil.
 // If the reference pointer is nil, it does nothing.
-func AssignIfNonNil[T any](ptr *T, ref *T) {
+func AssignIfNonNil[T any](ptr, ref *T) {
 	// return early if ptr is nil to avoid dereferencing a nil pointer
 	if ptr == nil {
 		return

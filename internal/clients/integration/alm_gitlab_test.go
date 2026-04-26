@@ -34,8 +34,14 @@ import (
 // https://github.com/crossplane/crossplane/blob/master/CONTRIBUTING.md#contributing-code
 
 const (
+	// gitlabALMName is a test GitLab ALM name.
 	gitlabALMName = "gitlab-main"
-	gitlabALMURL  = "https://gitlab.example.com"
+	// gitlabALMURL is a test GitLab ALM URL.
+	gitlabALMURL = "https://gitlab.example.com"
+	// gitlabPATToken is a test GitLab PAT token.
+	gitlabPATToken = "pat-token"
+	// gitlabMutatedURL is a test GitLab mutated URL.
+	gitlabMutatedURL = "https://mutated.example.com"
 )
 
 // TestLateInitializeALMGitLab tests the LateInitializeALMGitLab function.
@@ -182,6 +188,7 @@ func TestIsALMGitLabUpToDate(t *testing.T) {
 	}
 }
 
+// TestGenerateALMGitLabCreateOptions tests GenerateALMGitLabCreateOptions.
 func TestGenerateALMGitLabCreateOptions(t *testing.T) {
 	t.Parallel()
 
@@ -194,11 +201,12 @@ func TestGenerateALMGitLabCreateOptions(t *testing.T) {
 		t.Fatal("GenerateALMGitLabCreateOptions() returned nil")
 	}
 
-	if got.URL != gitlabALMURL || got.Key != gitlabALMName || got.PersonalAccessToken != "pat-token" {
+	if got.URL != gitlabALMURL || got.Key != gitlabALMName || got.PersonalAccessToken != gitlabPATToken {
 		t.Fatalf("GenerateALMGitLabCreateOptions() unexpected options: %+v", got)
 	}
 }
 
+// TestGenerateALMGitLabUpdateOptions tests GenerateALMGitLabUpdateOptions.
 func TestGenerateALMGitLabUpdateOptions(t *testing.T) {
 	t.Parallel()
 
@@ -232,13 +240,14 @@ func TestGenerateALMGitLabUpdateOptions(t *testing.T) {
 				t.Fatal("GenerateALMGitLabUpdateOptions() returned nil")
 			}
 
-			if got.URL != gitlabALMURL || got.Key != tc.currentKey || got.PersonalAccessToken != "pat-token" || got.NewKey != tc.wantNewKey {
+			if got.URL != gitlabALMURL || got.Key != tc.currentKey || got.PersonalAccessToken != gitlabPATToken || got.NewKey != tc.wantNewKey {
 				t.Fatalf("GenerateALMGitLabUpdateOptions() unexpected options: %+v", got)
 			}
 		})
 	}
 }
 
+// TestFindGitLabALMDefinitionByKey tests FindGitLabALMDefinitionByKey.
 func TestFindGitLabALMDefinitionByKey(t *testing.T) {
 	t.Parallel()
 
@@ -287,13 +296,14 @@ func TestFindGitLabALMDefinitionByKey(t *testing.T) {
 		}
 
 		// Mutate via the returned pointer; the slice element must reflect the change.
-		got.URL = "https://mutated.example.com"
+		got.URL = gitlabMutatedURL
 		if (*defs)[1].URL != "https://mutated.example.com" {
 			t.Fatal("FindGitLabALMDefinitionByKey() returned a copy, not a pointer to the slice element")
 		}
 	})
 }
 
+// TestGenerateALMGitLabObservation tests GenerateALMGitLabObservation.
 func TestGenerateALMGitLabObservation(t *testing.T) {
 	t.Parallel()
 
@@ -321,6 +331,7 @@ func TestGenerateALMGitLabObservation(t *testing.T) {
 	})
 }
 
+// TestGitLabClientConstructors tests GitLab client constructors.
 func TestGitLabClientConstructors(t *testing.T) {
 	t.Parallel()
 
