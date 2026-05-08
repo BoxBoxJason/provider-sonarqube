@@ -25,59 +25,62 @@ import (
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	xpv2 "github.com/crossplane/crossplane-runtime/v2/apis/common/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	instancev1alpha1 "github.com/crossplane/provider-sonarqube/apis/instance/v1alpha1"
 	"github.com/crossplane/provider-sonarqube/internal/test/e2e"
 )
 
-// TestQualityProfileCRUD creates an empty (no custom rules) Go quality
-// profile and verifies SonarQube knows about it at the expected name +
-// language. Leaving rules out keeps the test hermetic - rule references
-// are exercised separately in the rule_test.go suite.
-func TestQualityProfileCRUD(t *testing.T) {
+// TestPluginInstall creates a Plugin CR, waits for Ready, and verifies
+// the plugin is installed in SonarQube. The t.Cleanup uninstalls it.
+func TestPluginInstall(t *testing.T) {
 	t.Parallel()
 
 	f := e2e.New(t)
 	const (
-		crName   = "e2e-qp-go-crud"
-		qpName   = "e2e-qp-go-crud"
-		qpLang   = "go"
-		hoursTtl = 2 * time.Minute
+		crName    = "e2e-plugin-findbugs"
+		pluginKey = "findbugs"
 	)
 
-	qp := &instancev1alpha1.QualityProfile{
+	plugin := &instancev1alpha1.Plugin{
 		ObjectMeta: metav1.ObjectMeta{Name: crName, Namespace: "default"},
-		Spec: instancev1alpha1.QualityProfileSpec{
+		Spec: instancev1alpha1.PluginSpec{
 			ManagedResourceSpec: xpv2.ManagedResourceSpec{
 				ProviderConfigReference: &xpv1.ProviderConfigReference{
 					Kind: "ClusterProviderConfig",
 					Name: f.ProviderConfigName,
 				},
 			},
-			ForProvider: instancev1alpha1.QualityProfileParameters{
-				Name:     qpName,
-				Language: qpLang,
-				Default:  ptr.To(false),
+			ForProvider: instancev1alpha1.PluginParameters{
+				Key: pluginKey,
 			},
 		},
 	}
 
-	f.CreateAndWaitForReady(t, qp, hoursTtl)
-	e2e.AssertReady(t, qp)
-	e2e.AssertSynced(t, qp)
+	f.CreateAndWaitForReady(t, plugin, 5*time.Minute)
+	e2e.AssertReady(t, plugin)
+	e2e.AssertSynced(t, plugin)
+	e2e.AssertExternalName(t, plugin, pluginKey)
 
-	got, err := f.FindQualityProfile(qpName, qpLang)
+	installed, err := f.FindInstalledPlugin(pluginKey)
 	if err != nil {
-		t.Fatalf("searching quality profiles: %v", err)
+		t.Fatalf("searching installed plugins: %v", err)
 	}
-	if got == nil {
-		t.Fatalf("quality profile %q (%s) not found in SonarQube", qpName, qpLang)
+
+	if installed != nil {
+		if installed.Key != pluginKey {
+			t.Errorf("plugin key = %q, want %q", installed.Key, pluginKey)
+		}
+		return
 	}
-	if got.Language != qpLang {
-		t.Errorf("quality profile language = %q, want %q", got.Language, qpLang)
+
+	// Plugins require a SonarQube restart to move from pending to installed;
+	// accept pending-install as equivalent for e2e purposes.
+	pending, err := f.FindPendingInstallPlugin(pluginKey)
+	if err != nil {
+		t.Fatalf("searching pending plugins: %v", err)
 	}
-	if got.IsBuiltIn {
-		t.Errorf("quality profile %q is reported as built-in; want user-created", qpName)
+
+	if pending == nil {
+		t.Fatalf("plugin %q not found in SonarQube installed or pending-install plugins", pluginKey)
 	}
 }
