@@ -1,0 +1,97 @@
+# ---
+# # Example 1: Global permissions for a group (by direct name).
+# # This is the simplest case: assign two global permissions to a group.
+# apiVersion: iam.sonarqube.crossplane.io/v1alpha1
+# kind: Permissions
+# metadata:
+#   name: example-group-permissions
+#   namespace: default
+# spec:
+#   forProvider:
+#     # The name of the group to assign permissions to.
+#     # Mutually exclusive with login / loginRef / loginSelector.
+#     groupName: sonar-users
+
+#     # Global permissions to assign.
+#     # Valid global values: admin, gateadmin, profileadmin, provisioning, scan,
+#     #                      applicationcreator, portfoliocreator
+#     permissions:
+#       - scan
+#       - provisioning
+
+#   providerConfigRef:
+#     name: example
+#     kind: ProviderConfig
+
+# ---
+# # Example 2: Global permissions for a user (by direct login).
+# apiVersion: iam.sonarqube.crossplane.io/v1alpha1
+# kind: Permissions
+# metadata:
+#   name: example-user-permissions
+#   namespace: default
+# spec:
+#   forProvider:
+#     # The login of the user to assign permissions to.
+#     # Mutually exclusive with groupName / groupNameRef / groupNameSelector.
+#     login: BoxBoxJason
+
+#     # Global permissions to assign.
+#     permissions:
+#       - admin
+
+#   providerConfigRef:
+#     name: example
+#     kind: ProviderConfig
+
+---
+# Example 3: Project-scoped permissions for a user.
+# Omitting projectKey (or projectKeyRef) manages global permissions instead.
+# Valid project-scoped values: admin, codeviewer, issueadmin,
+#                              securityhotspotadmin, scan, user
+apiVersion: iam.sonarqube.crossplane.io/v1alpha1
+kind: Permissions
+metadata:
+  name: example-user-project-permissions
+  namespace: default
+spec:
+  forProvider:
+    login: BoxBoxJason
+
+    # Scope the permissions to a specific project.
+    # Mutually exclusive with a global assignment for the same subject.
+    projectKey: my-project
+
+    permissions:
+      - admin
+
+  providerConfigRef:
+    name: example
+    kind: ProviderConfig
+
+# ---
+# # Example 4: Project-scoped permissions for a group.
+# # Omitting projectKey (or projectKeyRef) manages global permissions instead.
+# # Valid project-scoped values: admin, codeviewer, issueadmin,
+# #                              securityhotspotadmin, scan, user
+# apiVersion: iam.sonarqube.crossplane.io/v1alpha1
+# kind: Permissions
+# metadata:
+#   name: example-group-project-permissions
+#   namespace: default
+# spec:
+#   forProvider:
+#     groupName: sonar-users
+
+#     # Scope the permissions to a specific project.
+#     # Mutually exclusive with a global assignment for the same subject.
+#     projectKey: my-project
+
+#     permissions:
+#       - user
+#       - scan
+#       - codeviewer
+
+#   providerConfigRef:
+#     name: example
+#     kind: ProviderConfig
