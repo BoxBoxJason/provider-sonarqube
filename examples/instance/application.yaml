@@ -1,0 +1,34 @@
+---
+apiVersion: instance.sonarqube.crossplane.io/v1alpha1
+kind: Application
+metadata:
+  name: example-application
+  namespace: default
+spec:
+  forProvider:
+    # Key of the application in SonarQube, must be unique across the server
+    key: example-application-key
+    # Display name of the application in SonarQube
+    name: Example Application
+    # Description of the application in SonarQube
+    description: This is an example application managed by Crossplane
+    # Visibility of the application, either public or private (immutable)
+    visibility: public
+    # Keys of the member projects. This list is exhaustive: any other member
+    # project is removed from the application.
+    projects:
+      - example-project-key
+    # Member projects can also be referenced through Project managed resources
+    # projectRefs:
+    #   - name: example-project
+    # Branches of the application, excluding its main branch. This list is
+    # exhaustive: any other non-main application branch is deleted.
+    branches:
+      - name: release
+        # Project branch used for each member project in this application branch
+        projects:
+          - project: example-project-key
+            branch: release
+  providerConfigRef:
+    name: example
+    kind: ProviderConfig

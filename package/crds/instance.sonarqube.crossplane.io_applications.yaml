@@ -1,0 +1,439 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: applications.instance.sonarqube.crossplane.io
+spec:
+  group: instance.sonarqube.crossplane.io
+  names:
+    categories:
+    - crossplane
+    - managed
+    - sonarqube
+    kind: Application
+    listKind: ApplicationList
+    plural: applications
+    singular: application
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: READY
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Synced')].status
+      name: SYNCED
+      type: string
+    - jsonPath: .metadata.annotations.crossplane\.io/external-name
+      name: EXTERNAL-NAME
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          An Application manages a SonarQube application (Enterprise Edition only).
+          An application groups several existing projects under a fixed membership,
+          with its own branch definitions.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: An ApplicationSpec defines the desired state of an Application.
+            properties:
+              forProvider:
+                description: ApplicationParameters are the configurable fields of
+                  an Application.
+                properties:
+                  branches:
+                    description: |-
+                      Branches is the exhaustive list of the application branches, excluding the main branch
+                      which is managed by SonarQube. Any non-main application branch that is not in this list
+                      is deleted from the application.
+                    items:
+                      description: |-
+                        ApplicationBranchParameters are the configurable fields of an
+                        Application branch.
+                      properties:
+                        name:
+                          description: Name is the name of the application branch.
+                          minLength: 1
+                          type: string
+                        projects:
+                          description: |-
+                            Projects maps member projects to the project branch used in this application branch.
+                            This list is exhaustive: any other project in the application branch is removed from it.
+                            Every project listed here must be a member of the application.
+                          items:
+                            description: |-
+                              ApplicationBranchProjectParameters select the branch of a member project
+                              used in an Application branch.
+                            properties:
+                              branch:
+                                description: Branch is the name of the project branch.
+                                minLength: 1
+                                type: string
+                              project:
+                                description: Project is the key of the member project.
+                                minLength: 1
+                                type: string
+                            required:
+                            - branch
+                            - project
+                            type: object
+                          minItems: 1
+                          type: array
+                          x-kubernetes-list-map-keys:
+                          - project
+                          x-kubernetes-list-type: map
+                      required:
+                      - name
+                      - projects
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  description:
+                    description: |-
+                      Description is the application description.
+                      When unset, the description is not managed.
+                    minLength: 1
+                    type: string
+                  key:
+                    description: Key is the application key. Immutable after creation.
+                    minLength: 1
+                    type: string
+                    x-kubernetes-validations:
+                    - message: Key is immutable
+                      rule: self == oldSelf
+                  name:
+                    description: Name is the application display name.
+                    minLength: 1
+                    type: string
+                  projectRefs:
+                    description: ProjectRefs are references to Projects used to populate
+                      Projects.
+                    items:
+                      description: A NamespacedReference to a named object.
+                      properties:
+                        name:
+                          description: Name of the referenced object.
+                          type: string
+                        namespace:
+                          description: Namespace of the referenced object
+                          type: string
+                        policy:
+                          description: Policies for referencing.
+                          properties:
+                            resolution:
+                              default: Required
+                              description: |-
+                                Resolution specifies whether resolution of this reference is required.
+                                The default is 'Required', which means the reconcile will fail if the
+                                reference cannot be resolved. 'Optional' means this reference will be
+                                a no-op if it cannot be resolved.
+                              enum:
+                              - Required
+                              - Optional
+                              type: string
+                            resolve:
+                              description: |-
+                                Resolve specifies when this reference should be resolved. The default
+                                is 'IfNotPresent', which will attempt to resolve the reference only when
+                                the corresponding field is not present. Use 'Always' to resolve the
+                                reference on every reconcile.
+                              enum:
+                              - Always
+                              - IfNotPresent
+                              type: string
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  projectSelector:
+                    description: ProjectSelector selects references to Projects used
+                      to populate Projects.
+                    properties:
+                      matchControllerRef:
+                        description: |-
+                          MatchControllerRef ensures an object with the same controller reference
+                          as the selecting object is selected.
+                        type: boolean
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: MatchLabels ensures an object with matching labels
+                          is selected.
+                        type: object
+                      namespace:
+                        description: Namespace for the selector
+                        type: string
+                      policy:
+                        description: Policies for selection.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: |-
+                              Resolution specifies whether resolution of this reference is required.
+                              The default is 'Required', which means the reconcile will fail if the
+                              reference cannot be resolved. 'Optional' means this reference will be
+                              a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: |-
+                              Resolve specifies when this reference should be resolved. The default
+                              is 'IfNotPresent', which will attempt to resolve the reference only when
+                              the corresponding field is not present. Use 'Always' to resolve the
+                              reference on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
+                    type: object
+                  projects:
+                    description: |-
+                      Projects is the exhaustive list of keys of the projects that are members of the application.
+                      Any member project that is not in this list is removed from the application.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  visibility:
+                    default: public
+                    description: Visibility is the application visibility. Immutable
+                      after creation.
+                    enum:
+                    - public
+                    - private
+                    type: string
+                    x-kubernetes-validations:
+                    - message: Visibility is immutable
+                      rule: self == oldSelf
+                required:
+                - key
+                - name
+                type: object
+              managementPolicies:
+                default:
+                - '*'
+                description: |-
+                  THIS IS A BETA FIELD. It is on by default but can be opted out
+                  through a Crossplane feature flag.
+                  ManagementPolicies specify the array of actions Crossplane is allowed to
+                  take on the managed and external resources.
+                  See the design doc for more information: https://github.com/crossplane/crossplane/blob/499895a25d1a1a0ba1604944ef98ac7a1a71f197/design/design-doc-observe-only-resources.md?plain=1#L223
+                  and this one: https://github.com/crossplane/crossplane/blob/444267e84783136daa93568b364a5f01228cacbe/design/one-pager-ignore-changes.md
+                items:
+                  description: |-
+                    A ManagementAction represents an action that the Crossplane controllers
+                    can take on an external resource.
+                  enum:
+                  - Observe
+                  - Create
+                  - Update
+                  - Delete
+                  - LateInitialize
+                  - '*'
+                  type: string
+                type: array
+              providerConfigRef:
+                default:
+                  kind: ClusterProviderConfig
+                  name: default
+                description: |-
+                  ProviderConfigReference specifies how the provider that will be used to
+                  create, observe, update, and delete this managed resource should be
+                  configured.
+                properties:
+                  kind:
+                    description: Kind of the referenced object.
+                    type: string
+                  name:
+                    description: Name of the referenced object.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              writeConnectionSecretToRef:
+                description: |-
+                  WriteConnectionSecretToReference specifies the namespace and name of a
+                  Secret to which any connection details for this managed resource should
+                  be written. Connection details frequently include the endpoint, username,
+                  and password required to connect to the managed resource.
+                properties:
+                  name:
+                    description: Name of the secret.
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - forProvider
+            type: object
+          status:
+            description: An ApplicationStatus represents the observed state of an
+              Application.
+            properties:
+              atProvider:
+                description: ApplicationObservation are the observable fields of an
+                  Application.
+                properties:
+                  branches:
+                    description: Branches are the branches of the application.
+                    items:
+                      description: |-
+                        ApplicationBranchObservation is the observed state of an Application
+                        branch.
+                      properties:
+                        isMain:
+                          description: IsMain indicates whether this is the main branch
+                            of the application.
+                          type: boolean
+                        name:
+                          description: Name is the name of the application branch.
+                          type: string
+                        projects:
+                          description: Projects are the project branches used in this
+                            application branch.
+                          items:
+                            description: |-
+                              ApplicationBranchProjectObservation is the observed project branch used
+                              in an Application branch.
+                            properties:
+                              branch:
+                                description: Branch is the name of the project branch.
+                                type: string
+                              isMain:
+                                description: IsMain indicates whether the project
+                                  branch is the project main branch.
+                                type: boolean
+                              project:
+                                description: Project is the key of the member project.
+                                type: string
+                            required:
+                            - isMain
+                            - project
+                            type: object
+                          type: array
+                      required:
+                      - isMain
+                      - name
+                      type: object
+                    type: array
+                  description:
+                    description: Description is the application description.
+                    type: string
+                  key:
+                    description: Key is the application key.
+                    type: string
+                  name:
+                    description: Name is the application name.
+                    type: string
+                  projects:
+                    description: Projects are the keys of the member projects of the
+                      application.
+                    items:
+                      type: string
+                    type: array
+                  tags:
+                    description: Tags are the tags of the application.
+                    items:
+                      type: string
+                    type: array
+                  visibility:
+                    description: Visibility is the application visibility.
+                    type: string
+                type: object
+              conditions:
+                description: Conditions of the resource.
+                items:
+                  description: A Condition that may apply to a resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        LastTransitionTime is the last time this condition transitioned from one
+                        status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A Message containing details about this condition's last transition from
+                        one status to another, if any.
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        ObservedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      type: integer
+                    reason:
+                      description: A Reason for this condition's last transition from
+                        one status to another.
+                      type: string
+                    status:
+                      description: Status of this condition; is it currently True,
+                        False, or Unknown?
+                      type: string
+                    type:
+                      description: |-
+                        Type of this condition. At most one of each condition type may apply to
+                        a resource at any point in time.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastHandledReconcileAt:
+                description: |-
+                  LastHandledReconcileAt holds the value of the most recent
+                  reconcile-requested-at annotation token that the controller has
+                  processed. Users can compare this to the annotation to determine
+                  whether a reconcile request has been handled.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the latest metadata.generation
+                  which resulted in either a ready state, or stalled due to error
+                  it can not recover from without human intervention.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

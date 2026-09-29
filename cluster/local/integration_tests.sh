@@ -44,11 +44,27 @@ fi
 echo_step "creating kind controlplane and installing crossplane"
 make -C "${projectdir}" controlplane.up
 
+# kind_load_image loads a pulled image into the kind cluster. Docker hosts
+# using the containerd image store keep the multi-arch index but only the
+# host platform's layers, which makes `kind load docker-image` fail with
+# "content digest ... not found"; fall back to a single-platform archive.
+kind_load_image() {
+    local image=$1 archive
+    if "${KIND}" load docker-image "${image}" --name="${KIND_CLUSTER_NAME}"; then
+        return 0
+    fi
+    echo "kind load docker-image failed for ${image}, retrying with a single-platform archive"
+    archive="$(mktemp)"
+    docker save --platform "$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')" -o "${archive}" "${image}"
+    "${KIND}" load image-archive "${archive}" --name="${KIND_CLUSTER_NAME}"
+    rm -f "${archive}"
+}
+
 echo_step "loading SonarQube images into kind cluster"
 docker pull docker.io/library/sonarqube:community
 docker pull docker.io/library/sonarqube:enterprise
-"${KIND}" load docker-image docker.io/library/sonarqube:community --name="${KIND_CLUSTER_NAME}"
-"${KIND}" load docker-image docker.io/library/sonarqube:enterprise --name="${KIND_CLUSTER_NAME}"
+kind_load_image docker.io/library/sonarqube:community
+kind_load_image docker.io/library/sonarqube:enterprise
 
 echo_step "deploying ${PACKAGE_NAME} provider package"
 # local.xpkg.deploy.provider.<name> patches Crossplane with a dev sidecar,
