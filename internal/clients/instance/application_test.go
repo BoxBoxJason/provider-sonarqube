@@ -264,7 +264,7 @@ func TestIsApplicationUpToDate(t *testing.T) {
 			Name:     "App",
 			Projects: []string{"proj-b", "proj-a"},
 			Branches: []v1alpha1.ApplicationBranchParameters{
-				newApplicationBranch("release", "proj-a", "release-a"),
+				newApplicationBranch("release", "proj-a", "release-a", "proj-b", "main"),
 			},
 		}
 	}
@@ -340,7 +340,7 @@ func TestIsApplicationUpToDate(t *testing.T) {
 		"BranchDiffers": {
 			spec: func() *v1alpha1.ApplicationParameters {
 				s := upToDateSpec()
-				s.Branches = []v1alpha1.ApplicationBranchParameters{newApplicationBranch("release", "proj-a", "other")}
+				s.Branches = []v1alpha1.ApplicationBranchParameters{newApplicationBranch("release", "proj-a", "other", "proj-b", "main")}
 
 				return s
 			}(),
@@ -433,10 +433,10 @@ func TestIsApplicationBranchUpToDate(t *testing.T) {
 			spec: new(newApplicationBranch("release", "proj-a", "release-a")),
 			want: false,
 		},
-		"SubsetMatches": {
+		"ExtraObservedProject": {
 			spec:        new(newApplicationBranch("release", "proj-a", "release-a")),
 			observation: &observed,
-			want:        true,
+			want:        false,
 		},
 		"AllMatch": {
 			spec:        new(newApplicationBranch("release", "proj-b", "main", "proj-a", "release-a")),

@@ -86,6 +86,7 @@ type ApplicationBranchParameters struct {
 	Name string `json:"name"`
 
 	// Projects maps member projects to the project branch used in this application branch.
+	// This list is exhaustive: any other project in the application branch is removed from it.
 	// Every project listed here must be a member of the application.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1

@@ -418,10 +418,19 @@ func TestObserve(t *testing.T) {
 		},
 		"ExistsAndUpToDate": {
 			client: &fake.MockApplicationsClient{ShowFn: showApplication},
-			mg:     newApplication(testApplicationKey, []string{"proj-a", "proj-b"}, newBranch("release", "proj-a", "release-a")),
+			mg:     newApplication(testApplicationKey, []string{"proj-a", "proj-b"}, newBranch("release", "proj-a", "release-a", "proj-b", "main")),
 			want: managed.ExternalObservation{
 				ResourceExists:    true,
 				ResourceUpToDate:  true,
+				ConnectionDetails: managed.ConnectionDetails{},
+			},
+		},
+		"BranchExtraProject": {
+			client: &fake.MockApplicationsClient{ShowFn: showApplication},
+			mg:     newApplication(testApplicationKey, []string{"proj-a", "proj-b"}, newBranch("release", "proj-a", "release-a")),
+			want: managed.ExternalObservation{
+				ResourceExists:    true,
+				ResourceUpToDate:  false,
 				ConnectionDetails: managed.ConnectionDetails{},
 			},
 		},

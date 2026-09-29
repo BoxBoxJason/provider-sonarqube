@@ -236,8 +236,9 @@ func AreApplicationBranchesUpToDate(spec []v1alpha1.ApplicationBranchParameters,
 	return true
 }
 
-// IsApplicationBranchUpToDate returns true when every project branch
-// selection of the desired branch matches the observed branch.
+// IsApplicationBranchUpToDate returns true when the observed branch uses
+// exactly the project branch selections of the desired branch, with no
+// extra project.
 func IsApplicationBranchUpToDate(spec *v1alpha1.ApplicationBranchParameters, observation *v1alpha1.ApplicationBranchObservation) bool {
 	if spec == nil {
 		return true
@@ -250,6 +251,10 @@ func IsApplicationBranchUpToDate(spec *v1alpha1.ApplicationBranchParameters, obs
 	observed := make(map[string]string, len(observation.Projects))
 	for _, project := range observation.Projects {
 		observed[project.Project] = project.Branch
+	}
+
+	if len(observed) != len(spec.Projects) {
+		return false
 	}
 
 	for _, selection := range spec.Projects {
