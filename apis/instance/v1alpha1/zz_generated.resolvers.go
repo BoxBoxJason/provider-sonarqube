@@ -13,6 +13,33 @@ import (
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// ResolveReferences of this Application.
+func (mg *Application) ResolveReferences(ctx context.Context, c client.Reader) error {
+	r := reference.NewAPINamespacedResolver(c, mg)
+
+	var mrsp reference.MultiNamespacedResolutionResponse
+	var err error
+
+	mrsp, err = r.ResolveMultiple(ctx, reference.MultiNamespacedResolutionRequest{
+		CurrentValues: mg.Spec.ForProvider.Projects,
+		Extract:       reference.ExternalName(),
+		Namespace:     mg.GetNamespace(),
+		References:    mg.Spec.ForProvider.ProjectRefs,
+		Selector:      mg.Spec.ForProvider.ProjectSelector,
+		To: reference.To{
+			List:    &ProjectList{},
+			Managed: &Project{},
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "mg.Spec.ForProvider.Projects")
+	}
+	mg.Spec.ForProvider.Projects = mrsp.ResolvedValues
+	mg.Spec.ForProvider.ProjectRefs = mrsp.ResolvedReferences
+
+	return nil
+}
+
 // ResolveReferences of this QualityProfile.
 func (mg *QualityProfile) ResolveReferences(ctx context.Context, c client.Reader) error {
 	r := reference.NewAPINamespacedResolver(c, mg)

@@ -410,6 +410,25 @@ func (f *Framework) FindPortfolioByKey(ctx context.Context, key string) (*sonar.
 	return res, nil
 }
 
+// FindApplicationByKey returns the SonarQube application with the given
+// key, or (nil, nil) if no such application exists. Applications are an
+// Enterprise Edition feature; SonarQube returns 404 both when the key is
+// unknown and when the running edition does not support applications.
+func (f *Framework) FindApplicationByKey(ctx context.Context, key string) (*sonar.ApplicationDetails, error) {
+	res, resp, err := f.Sonar.Applications.Show(ctx, &sonar.ApplicationsShowOptions{Application: key})
+	defer helpers.CloseBody(resp)
+	if common.IsResponseNotFound(resp) {
+		return nil, nil //nolint:nilnil // intentional: 404 is the natural absence sentinel
+	}
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		return nil, nil //nolint:nilnil // intentional
+	}
+	return &res.Application, nil
+}
+
 // FetchLicense returns the license currently applied to the SonarQube
 // instance. SonarQube always returns 200 from this endpoint - even an
 // unlicensed Enterprise/Data Center instance reports a License with empty

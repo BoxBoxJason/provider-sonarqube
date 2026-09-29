@@ -285,3 +285,30 @@ func TestNewNewCodePeriodsClient(t *testing.T) {
 		})
 	}
 }
+
+// TestNewApplicationsClient tests creating a new applications client.
+func TestNewApplicationsClient(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config common.Config
+	}{
+		"PersonalAccessToken": {
+			config: newTestConfig(),
+		},
+		"BasicAuth": {
+			config: newBasicAuthTestConfig(),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			client := NewApplicationsClient(tc.config)
+			if client == nil {
+				t.Error("NewApplicationsClient() returned nil")
+			}
+		})
+	}
+}
