@@ -21,8 +21,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
+	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/alecthomas/kingpin/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -45,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/crossplane/provider-sonarqube/apis"
+	observecache "github.com/crossplane/provider-sonarqube/internal/clients/common/cache"
 	sonarqube "github.com/crossplane/provider-sonarqube/internal/controller"
 	"github.com/crossplane/provider-sonarqube/internal/version"
 )
@@ -67,6 +70,10 @@ func main() {
 		enableManagementPolicies = app.Flag("enable-management-policies", "Enable support for Management Policies.").Default("true").Envar("ENABLE_MANAGEMENT_POLICIES").Bool()
 		enableChangeLogs         = app.Flag("enable-changelogs", "Enable support for capturing change logs during reconciliation.").Default("false").Envar("ENABLE_CHANGE_LOGS").Bool()
 		changelogsSocketPath     = app.Flag("changelogs-socket-path", "Path for changelogs socket (if enabled)").Default("/var/run/changelogs/changelogs.sock").Envar("CHANGELOGS_SOCKET_PATH").String()
+
+		enableObserveCache     = app.Flag("enable-observe-cache", "Enable the alpha cache of SonarQube list responses read during Observe.").Default("false").Envar("ENABLE_OBSERVE_CACHE").Bool()
+		observeCacheTTL        = app.Flag("observe-cache-ttl", "Lifetime of an observe cache entry. Must be greater than 0 and lower than 30s.").Default(observecache.DefaultTTL.String()).Envar("OBSERVE_CACHE_TTL").Duration()
+		observeCacheMaxEntries = app.Flag("observe-cache-max-entries", "Maximum number of observe cache entries. Must be greater than 0.").Default(strconv.Itoa(observecache.DefaultMaxEntries)).Envar("OBSERVE_CACHE_MAX_ENTRIES").Int()
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
@@ -82,6 +89,23 @@ func main() {
 		// is not really needed, but otherwise we get a warning from the
 		// controller-runtime.
 		ctrl.SetLogger(zap.New(zap.WriteTo(io.Discard)))
+	}
+
+	if *enableObserveCache {
+		// The cache retains SonarQube responses on top of the provider's own
+		// needs: let the GC know about the container memory limit. This is a
+		// no-op when GOMEMLIMIT is set explicitly.
+		memLimit, err := memlimit.Set()
+		if err != nil {
+			log.Info("Cannot set GOMEMLIMIT from the container memory limit", "error", err)
+		}
+
+		kingpin.FatalIfError(observecache.Configure(observecache.Options{
+			Enabled:    true,
+			TTL:        *observeCacheTTL,
+			MaxEntries: *observeCacheMaxEntries,
+		}), "Invalid observe cache configuration")
+		log.Info("Alpha feature enabled", "flag", "observe-cache", "ttl", *observeCacheTTL, "maxEntries", *observeCacheMaxEntries, "goMemLimit", memLimit)
 	}
 
 	cfg, err := ctrl.GetConfig()
