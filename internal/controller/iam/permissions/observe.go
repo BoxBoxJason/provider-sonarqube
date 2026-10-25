@@ -68,9 +68,13 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, errors.Wrap(err, errObservePermissions)
 	}
 
-	if !found {
+	if !found && len(permissions.Spec.ForProvider.Permissions) > 0 {
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
+
+	// Unfiltered searches still return a subject with an empty permission
+	// list once its last grant is removed. A subject can only be missing
+	// when it never had grants, which is converged for an empty desired set.
 
 	// Deleting: Check that the resource has no permissions left; mark the
 	// external resource as non-existent so the managed reconciler can
