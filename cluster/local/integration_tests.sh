@@ -73,6 +73,10 @@ kind_load_image docker.io/library/sonarqube:enterprise
 ENABLE_OBSERVE_CACHE="${ENABLE_OBSERVE_CACHE:-true}"
 export ENABLE_OBSERVE_CACHE
 
+# Match the provider default; override to exercise direct Secret reads.
+ENABLE_SECRET_CACHE="${ENABLE_SECRET_CACHE:-true}"
+export ENABLE_SECRET_CACHE
+
 # local.xpkg.deploy.provider.<name> uses DRC_FILE as the provider's
 # DeploymentRuntimeConfig when it exists; it overrides the name and image.
 DRC_FILE="$(mktemp)"
@@ -95,9 +99,11 @@ spec:
               env:
                 - name: ENABLE_OBSERVE_CACHE
                   value: "${ENABLE_OBSERVE_CACHE}"
+                - name: ENABLE_SECRET_CACHE
+                  value: "${ENABLE_SECRET_CACHE}"
 EOF
 
-echo_step "deploying ${PACKAGE_NAME} provider package (ENABLE_OBSERVE_CACHE=${ENABLE_OBSERVE_CACHE})"
+echo_step "deploying ${PACKAGE_NAME} provider package (ENABLE_OBSERVE_CACHE=${ENABLE_OBSERVE_CACHE}, ENABLE_SECRET_CACHE=${ENABLE_SECRET_CACHE})"
 # local.xpkg.deploy.provider.<name> patches Crossplane with a dev sidecar,
 # extracts each xpkg into the cache under the cache key Crossplane >=2.2
 # expects (xpkg.crossplane.internal/dev/<name>@<digest>), kubectl-cps the
