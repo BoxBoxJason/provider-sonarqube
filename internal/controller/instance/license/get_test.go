@@ -28,9 +28,12 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakekube "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1alpha1 "github.com/crossplane/provider-sonarqube/apis/instance/v1alpha1"
+	"github.com/crossplane/provider-sonarqube/internal/clients/common"
 	"github.com/crossplane/provider-sonarqube/internal/fake"
 )
 
@@ -219,6 +222,28 @@ func TestResolveLicenseKey(t *testing.T) {
 			license: newTestLicense(externalLicenseName, licenseKeyRef),
 			want:    want{errSubstr: "cannot get license key from secret"},
 		},
+		"SecretRefInOtherNamespaceNotRead": {
+			objects: []runtime.Object{testSecret("license-key", "other-ns", "license", testLicenseKey)},
+			license: newTestLicense(externalLicenseName, licenseKeyRef),
+			want:    want{errSubstr: common.ErrSecretNotFound},
+		},
+		"EndpointBasicAuthPasswordInOtherNamespaceNotRead": {
+			objects: []runtime.Object{testSecret("endpoint-password", "other-ns", "password", "s3cret")},
+			license: newTestLicenseWithEndpoint(externalLicenseName, &v1alpha1.LicenseEndpoint{
+				URL:                        "http://example.invalid",
+				BasicAuthUsername:          new("alice"),
+				BasicAuthPasswordSecretRef: secretRef("endpoint-password", "password"),
+			}),
+			want: want{errSubstr: common.ErrSecretNotFound},
+		},
+		"EndpointBearerTokenInOtherNamespaceNotRead": {
+			objects: []runtime.Object{testSecret("endpoint-token", "other-ns", "token", "tok123")},
+			license: newTestLicenseWithEndpoint(externalLicenseName, &v1alpha1.LicenseEndpoint{
+				URL:                  "http://example.invalid",
+				BearerTokenSecretRef: secretRef("endpoint-token", "token"),
+			}),
+			want: want{errSubstr: common.ErrSecretNotFound},
+		},
 		"NeitherSourceSet": {
 			objects: []runtime.Object{},
 			license: newTestLicense(externalLicenseName, nil),
@@ -328,7 +353,17 @@ func TestResolveLicenseKey(t *testing.T) {
 				t.Fatalf("AddToScheme() unexpected error: %v", err)
 			}
 
-			kubeClient := fakekube.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tc.objects...).Build()
+			// Every secret read must target the License's own namespace.
+			kubeClient := fakekube.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tc.objects...).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if key.Namespace != tc.license.GetNamespace() {
+							t.Errorf("unexpected Get in namespace %q, want only %q", key.Namespace, tc.license.GetNamespace())
+						}
+
+						return c.Get(ctx, key, obj, opts...)
+					},
+				}).Build()
 			e := &external{kube: kubeClient}
 
 			got, err := e.resolveLicenseKey(context.Background(), tc.license)
