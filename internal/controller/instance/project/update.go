@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/errors"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/utils/ptr"
 
 	v1alpha1 "github.com/crossplane/provider-sonarqube/apis/instance/v1alpha1"
@@ -47,7 +48,9 @@ func (c *external) updateProjectConcurrently(ctx context.Context, project *v1alp
 		c.updateDefaultBranch(ctx, project, projectKey, errChan)
 	})
 
-	c.updateBranchNewCodePeriods(ctx, project, projectKey, &waitGr, errChan)
+	waitGr.Go(func() {
+		c.updateBranchNewCodePeriods(ctx, project, projectKey, errChan)
+	})
 
 	waitGr.Go(func() {
 		c.updateProjectLinks(ctx, project, projectId, errChan)
@@ -137,28 +140,35 @@ func (c *external) updateDefaultBranch(ctx context.Context, project *v1alpha1.Pr
 
 // updateBranchNewCodePeriods updates the new code periods of branches that
 // differ from the desired state.
-func (c *external) updateBranchNewCodePeriods(ctx context.Context, project *v1alpha1.Project, projectKey string, waitGr *sync.WaitGroup, errChan chan<- error) {
+func (c *external) updateBranchNewCodePeriods(ctx context.Context, project *v1alpha1.Project, projectKey string, errChan chan<- error) {
 	if instance.AreProjectBranchesUpToDate(project.Spec.ForProvider.Branches, project.Status.AtProvider.Branches) {
 		return
 	}
 
-	for branch, codePeriodSpec := range project.Spec.ForProvider.Branches {
-		waitGr.Add(1)
+	// Bound the number of concurrent SonarQube requests: the branches map
+	// comes from the spec, so its size is controlled by the tenant.
+	branchesGroup := helpers.NewRequestGroup()
 
-		go func(branchName string, newCodePeriodSpec *v1alpha1.ProjectNewCodePeriodParameters) {
-			defer waitGr.Done()
+	for branchName, newCodePeriodSpec := range project.Spec.ForProvider.Branches {
+		branchObservation, branchExists := project.Status.AtProvider.Branches[branchName]
+		if !branchExists || instance.IsNewCodePeriodUpToDate(newCodePeriodSpec, &branchObservation.NewCodePeriod) {
+			continue
+		}
 
-			branchObservation, branchExists := project.Status.AtProvider.Branches[branchName]
-			if branchExists && !instance.IsNewCodePeriodUpToDate(newCodePeriodSpec, &branchObservation.NewCodePeriod) {
-				resp, err := c.projectNewCodePeriodsClient.Set(ctx, instance.GenerateBranchNewCodePeriodsSetOptions(projectKey, branchName, newCodePeriodSpec)) //nolint:bodyclose // closed via helpers.CloseBody
-				helpers.CloseBody(resp)
+		branchesGroup.Go(func() error {
+			resp, err := c.projectNewCodePeriodsClient.Set(ctx, instance.GenerateBranchNewCodePeriodsSetOptions(projectKey, branchName, newCodePeriodSpec)) //nolint:bodyclose // closed via helpers.CloseBody
+			helpers.CloseBody(resp)
 
-				if err != nil {
-					errChan <- errors.Wrapf(err, "cannot update new code period for branch %s", branchName)
-				}
+			if err != nil {
+				errChan <- errors.Wrapf(err, "cannot update new code period for branch %s", branchName)
 			}
-		}(branch, codePeriodSpec)
+
+			return nil
+		})
 	}
+
+	// Errors are reported through errChan.
+	_ = branchesGroup.Wait()
 }
 
 // updateProjectLinks updates the links of the project if they differ from the
@@ -168,67 +178,64 @@ func (c *external) updateProjectLinks(ctx context.Context, project *v1alpha1.Pro
 		return
 	}
 
-	linksUpdateWaitGroup := sync.WaitGroup{}
-	linksUpdateWaitGroup.Go(func() {
-		c.deleteNonSpecLinks(ctx, project, errChan)
-	})
+	// Bound the number of concurrent SonarQube requests: the links list
+	// comes from the spec, so its length is controlled by the tenant.
+	linksGroup := helpers.NewRequestGroup()
+
+	c.deleteNonSpecLinks(ctx, project, linksGroup, errChan)
 
 	for _, link := range project.Spec.ForProvider.Links {
 		linkObservation, linkExists := project.Status.AtProvider.Links[link.Name]
 		linkUpToDate := linkExists && instance.IsProjectLinkUpToDate(link, &linkObservation)
+		deleteLink := linkExists && !linkUpToDate
+		createLink := !linkUpToDate
 
-		linksUpdateWaitGroup.Add(1)
-
-		go func(linkId string, linkSpec v1alpha1.ProjectLinkParameters, deleteLink bool, createLink bool) {
-			defer linksUpdateWaitGroup.Done()
-
+		linksGroup.Go(func() error {
 			if deleteLink {
-				resp, err := c.projectLinksClient.Delete(ctx, instance.GenerateProjectLinksDeleteOptions(linkId)) //nolint:bodyclose // closed via helpers.CloseBody
+				resp, err := c.projectLinksClient.Delete(ctx, instance.GenerateProjectLinksDeleteOptions(linkObservation.ID)) //nolint:bodyclose // closed via helpers.CloseBody
 				helpers.CloseBody(resp)
 
 				if err != nil {
-					errChan <- errors.Wrapf(err, "cannot delete Project link %s", linkSpec.Name)
+					errChan <- errors.Wrapf(err, "cannot delete Project link %s", link.Name)
 				}
 			}
 
 			if createLink {
-				_, resp, err := c.projectLinksClient.Create(ctx, instance.GenerateProjectLinksCreateOptions(projectId, linkSpec)) //nolint:bodyclose // closed via helpers.CloseBody
+				_, resp, err := c.projectLinksClient.Create(ctx, instance.GenerateProjectLinksCreateOptions(projectId, link)) //nolint:bodyclose // closed via helpers.CloseBody
 				helpers.CloseBody(resp)
 
 				if err != nil {
-					errChan <- errors.Wrapf(err, "cannot create Project link %s", linkSpec.Name)
+					errChan <- errors.Wrapf(err, "cannot create Project link %s", link.Name)
 				}
 			}
-		}(linkObservation.ID, link, linkExists && !linkUpToDate, !linkUpToDate)
+
+			return nil
+		})
 	}
 
-	linksUpdateWaitGroup.Wait()
+	// Errors are reported through errChan.
+	_ = linksGroup.Wait()
 }
 
-// deleteNonSpecLinks deletes the project links that exist in the observed state
-// but not in the desired state, or that differ between the observed
-// and desired state.
-func (c *external) deleteNonSpecLinks(ctx context.Context, project *v1alpha1.Project, errChan chan<- error) {
-	deleteWaitGroup := sync.WaitGroup{}
-	// Delete links that exist in the observed state but not in the desired state, or that differ between the observed and desired state.
+// deleteNonSpecLinks schedules on linksGroup the deletion of the project links
+// that exist in the observed state but not in the desired state.
+func (c *external) deleteNonSpecLinks(ctx context.Context, project *v1alpha1.Project, linksGroup *errgroup.Group, errChan chan<- error) {
 	for linkName, linkObservation := range project.Status.AtProvider.Links {
-		if !c.isProjectLinkInSpec(project.Spec.ForProvider.Links, linkName) {
-			deleteWaitGroup.Add(1)
-
-			go func(linkName string, linkId string) {
-				defer deleteWaitGroup.Done()
-
-				resp, err := c.projectLinksClient.Delete(ctx, instance.GenerateProjectLinksDeleteOptions(linkId)) //nolint:bodyclose // closed via helpers.CloseBody
-				helpers.CloseBody(resp)
-
-				if err != nil {
-					errChan <- errors.Wrapf(err, "cannot delete Project link %s", linkName)
-				}
-			}(linkName, linkObservation.ID)
+		if c.isProjectLinkInSpec(project.Spec.ForProvider.Links, linkName) {
+			continue
 		}
-	}
 
-	deleteWaitGroup.Wait()
+		linksGroup.Go(func() error {
+			resp, err := c.projectLinksClient.Delete(ctx, instance.GenerateProjectLinksDeleteOptions(linkObservation.ID)) //nolint:bodyclose // closed via helpers.CloseBody
+			helpers.CloseBody(resp)
+
+			if err != nil {
+				errChan <- errors.Wrapf(err, "cannot delete Project link %s", linkName)
+			}
+
+			return nil
+		})
+	}
 }
 
 // isProjectLinkInSpec checks if a link with the given name exists in the spec.

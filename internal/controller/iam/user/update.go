@@ -103,15 +103,15 @@ func (c *external) reconcileGroupMemberships(ctx context.Context, userResource *
 	desiredGroups := desiredGroupIDs(userResource.Spec.ForProvider.Groups)
 	toAdd, toRemove := buildGroupsDiff(desiredGroups, userResource.Status.AtProvider.Groups)
 
-	membershipsWaitGroup := sync.WaitGroup{}
-	membershipsWaitGroup.Add(len(toAdd) + len(toRemove))
+	// Bound the number of concurrent SonarQube requests: the groups list
+	// comes from the spec, so its length is controlled by the tenant.
+	membershipsGroup := helpers.NewRequestGroup()
+
 	errorSlice := make([]error, 0, len(toAdd)+len(toRemove))
 	errorSliceMutex := sync.Mutex{}
 
 	for _, groupID := range toAdd {
-		go func(groupID string) {
-			defer membershipsWaitGroup.Done()
-
+		membershipsGroup.Go(func() error {
 			created, resp, err := c.groupsClient.CreateGroupMembership(ctx, new(iam.GenerateGroupCreateMembershipOptions(groupID, externalName))) //nolint:bodyclose // closed via helpers.CloseBody
 			defer helpers.CloseBody(resp)
 
@@ -121,7 +121,7 @@ func (c *external) reconcileGroupMemberships(ctx context.Context, userResource *
 				errorSlice = append(errorSlice, errors.Wrapf(err, "cannot add User to Group %s", groupID))
 				errorSliceMutex.Unlock()
 
-				return
+				return nil
 			}
 
 			if created == nil || created.Id == "" {
@@ -130,13 +130,13 @@ func (c *external) reconcileGroupMemberships(ctx context.Context, userResource *
 				errorSlice = append(errorSlice, fmt.Errorf("cannot add User to Group %s: create group membership returned empty membership ID", groupID))
 				errorSliceMutex.Unlock()
 			}
-		}(groupID)
+
+			return nil
+		})
 	}
 
 	for _, groupMembershipID := range toRemove {
-		go func(groupMembershipID string) {
-			defer membershipsWaitGroup.Done()
-
+		membershipsGroup.Go(func() error {
 			resp, err := c.groupsClient.DeleteGroupMembership(ctx, groupMembershipID) //nolint:bodyclose // closed via helpers.CloseBody
 			defer helpers.CloseBody(resp)
 
@@ -146,10 +146,13 @@ func (c *external) reconcileGroupMemberships(ctx context.Context, userResource *
 				errorSlice = append(errorSlice, errors.Wrapf(err, "cannot remove user membership %s", groupMembershipID))
 				errorSliceMutex.Unlock()
 			}
-		}(groupMembershipID)
+
+			return nil
+		})
 	}
 
-	membershipsWaitGroup.Wait()
+	// Errors are collected in errorSlice so that all of them are reported.
+	_ = membershipsGroup.Wait()
 
 	return stderrors.Join(errorSlice...)
 }
